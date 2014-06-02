@@ -1,0 +1,59 @@
+{
+  "salesforce_downloaded_info": "see salesforce_bulk_downloader out",
+  "salesforce_historized_objects": {
+    "description": "A hash containing information on what objects are historized and where the history is coming from. For each object that should be historized it contains a key.'load_history_from' describes another object that is used to reconstruct history. 'name' is the name of the object, column mapping defines which fields/metadata columns should me mapped to the history table. Columns that are not here are taken 1:1 from the history object fields. 'merge_from' defines from which object the history should be saved with every load.",
+    "example_value": {
+      "Opportunity": {
+        "load_history_from": {
+          "name": "OpportunityHistory",
+          "column_mapping": {
+            "Id": "OpportunityId",
+            "_SNAPSHOT_AT": "SystemModstamp"
+          }
+        },
+        "merge_from": {
+          "name": "Opportunity",
+          "column_mapping": {
+            "_SNAPSHOT_AT": "_INSERTED_AT"
+          }
+        }
+      }
+    }
+  },
+  "dss_jdbc_url": {
+    "type": "string",
+    "example_value": "jdbc:dss://secure.gooddata.com/gdc/dss/instances/veryLongId",
+    "description": "Url of the DSS instance to work with."
+  },
+  "dss_GDC_USERNAME":{
+    "type": "string",
+    "example_value": "me@mycompany.com",
+    "optional": "conditionally",
+    "description": "Username that is used for authenticating to DSS. If not passed, GDC_USERNAME is used."
+  },
+  "dss_GDC_PASSWORD":{
+    "type": "string",
+    "example_value": "mypassword",
+    "optional": "conditionally",
+    "description": "Password that is used for authenticating to DSS. If not passed, GDC_PASSWORD is used."
+  },
+  "GDC_USERNAME":{
+    "type": "string",
+    "example_value": "me@mycompany.com",
+    "optional": "conditionally",
+    "description": "Username that is used for authenticating to GoodData. if dss_GDC_USERNAME isn't passed it's used for authenticating to DSS as well."
+  },
+  "GDC_PASSWORD":{
+    "type": "string",
+    "example_value": "mypassword",
+    "optional": "conditionally",
+    "description": "Password that is used for authenticating to GoodData. if dss_GDC_PASSWORD isn't passed it's used for authenticating to DSS as well."
+  },
+  "GDC_LOGGER": {
+    "type": "Logger",
+    "example_value": "#<Logger:0x001c62af @default_formatter=..>",
+    "optional": true,
+    "description": "If passed the log messages will be logged using the logger."
+  }
+}
+

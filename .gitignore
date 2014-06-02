@@ -3,4 +3,5 @@ bin
 .DS_Store
 *.pdf
 *.csv
-apps/*/tmp/*
+apps/*/tmp*/*
+apps/*/params.json

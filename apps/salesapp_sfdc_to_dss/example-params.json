@@ -1,18 +1,74 @@
 {
-  "salesforce_username": "me@mycompany.com",
-  "salesforce_password": "my password",
-  "salesforce_token": "my token",
-  "dss_table_prefix": "mycompany",
-
-  "salesforce_created_from": "2014-01-25T21:00:11+00:00",
-  "salesforce_created_to": "2014-02-01T16:33:16+00:00",
-
-  "salesforce_single_batch": false,
-
-  "salesforce_client_id": "the sfdc app id",
-  "salesforce_client_secret": "the sfdc app secret",
-  "salesforce_objects": ["Account", "Event", "OpportunityLineItem", "Opportunity", "User", "PricebookEntry", "Product2", "OpportunityStage", "Task"],
-  "dss_jdbc_url": "jdbc:dss://secure.gooddata.com/gdc/dss/instances/something",
-  "dss_GDC_USERNAME": "me@mycompany.com",
-  "dss_GDC_PASSWORD": "my password"
+  "salesforce_username": {
+    "example_value": "me@mycompany.com",
+    "description": "Username of the salesforce account to load the data from. salesforce_username, salesforce_password, salesforce_token can be replaced by salesforce_oauth_refresh_token"
+  },
+  "salesforce_password": {
+    "example_value": "my password",
+    "description": "Password of the salesforce account to load the data from. salesforce_username, salesforce_password, salesforce_token can be replaced by salesforce_oauth_refresh_token"
+  },
+  "salesforce_token": {
+    "example_value": "my token",
+    "description": "Security token for API access of the salesforce account to load the data from. salesforce_username, salesforce_password, salesforce_token can be replaced by salesforce_oauth_refresh_token"
+  },
+  "salesforce_oauth_refresh_token": {
+    "example_value": "5Aep861ikNsOLQGnbrFkBCx1TjDvXz2brerefeeaodjfa.kdfa",
+    "description": "OAuth refresh token for the account from which the data should be downloaded. Can be replaced by salesforce_username, salesforce_password, salesforce_token."
+  },
+  "salesforce_client_id": {
+    "example_value": "naeklrajHLJKHLJNKGHKGlkjblkbLKJHBlkhblKHblhB",
+    "description": "Id of the Salesforce app to use. One app can be used for multiple accounts."
+  },
+  "salesforce_client_secret": {
+    "example_value": "43349847520948375209",
+    "description": "Secret of the Salesforce app to use. One app can be used for multiple accounts."
+  },
+  "salesforce_objects": {
+    "type": "Array",
+    "example_value": ["Opportunity", "Task"],
+    "description": "List of salesforce objects to be downloaded. All available fields are downloaded."
+  },
+  "salesforce_history_objects":{
+    "type": "Array",
+    "example_value": ["OpportunityHistory"],
+    "description": "Handled the same way as salesforce_objects"
+  },
+  "salesforce_created_from": {
+    "type": "DateTime string",
+    "example_value": "2013-05-20T00:00:00+00:00",
+    "optional": true,
+    "description": "If passed, only objects created from the date are downloaded from salesforce."
+  },
+  "salesforce_created_to": {
+    "type": "DateTime string",
+    "example_value": "2013-05-29T00:00:00+00:00",
+    "optional": true,
+    "description": "If passed, only objects created until the date are downloaded from salesforce."
+  },
+  "salesforce_single_batch": {
+    "type": "Boolean string",
+    "example_value": "true",
+    "optional": true,
+    "description": "If value passed the Salesforce data are downloaded in a single batch as opposed to multiple parallel batches. Might be significanlty faster for small data and not working for big data."
+  },
+  "salesforce_historized_objects": {
+    "description": "Subset of salesforce_objects. For these objects a special table with snapshot date column is created. The table isn't populated automatically, user needs to do this in sql in subsequent bricks."
+  },
+  "dss_jdbc_url": {
+    "type": "string",
+    "example_value": "jdbc:dss://secure.gooddata.com/gdc/dss/instances/veryLongId",
+    "description": "Url of the DSS instance to work with."
+  },
+  "dss_GDC_USERNAME":{
+    "type": "string",
+    "example_value": "me@mycompany.com",
+    "optional": "conditionally",
+    "description": "Username that is used for authenticating to DSS. If not passed, GDC_USERNAME is used."
+  },
+  "dss_GDC_PASSWORD":{
+    "type": "string",
+    "example_value": "mypassword",
+    "optional": "conditionally",
+    "description": "Password that is used for authenticating to DSS. If not passed, GDC_PASSWORD is used."
+  }
 }

@@ -1,0 +1,41 @@
+{
+  "salesforce_client": {
+    "type": "Restforce",
+    "example_value": "#<Restforce::Data::Client @options={:api_version=>"29.0", ...>",
+    "description": "Client object that will be used for getting available fields for each object and as an inside client for salesforce_bulk_client."
+  },
+  "salesforce_bulk_client": {
+    "type": "SalesforceBulkQuery",
+    "example_value": "#<SalesforceBulkQuery::Api:0x4f450a6c @connection=...>",
+    "description": "Client object that will be used for bulk downloading the Salesforce data."
+  },
+  "salesforce_objects": {
+    "type": "Array",
+    "example_value": ["Opportunity", "Task"],
+    "description": "List of salesforce objects to be downloaded. All available fields are downloaded."
+  },
+  "salesforce_created_from": {
+    "type": "DateTime string",
+    "example_value": "2013-05-20T00:00:00+00:00",
+    "optional": true,
+    "description": "If passed, only objects created from the date are downloaded from salesforce."
+  },
+  "salesforce_created_to": {
+    "type": "DateTime string",
+    "example_value": "2013-05-29T00:00:00+00:00",
+    "optional": true,
+    "description": "If passed, only objects created until the date are downloaded from salesforce."
+  },
+  "salesforce_single_batch": {
+    "type": "Boolean string",
+    "example_value": "true",
+    "optional": true,
+    "description": "If value passed the Salesforce data are downloaded in a single batch as opposed to multiple parallel batches. Might be significanlty faster for small data and not working for big data."
+  },
+  "GDC_LOGGER": {
+    "type": "Logger",
+    "example_value": "#<Logger:0x001c62af @default_formatter=..>",
+    "optional": true,
+    "description": "If passed the log messages will be logged using the logger."
+  }
+}

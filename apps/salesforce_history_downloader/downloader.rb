@@ -1,3 +1,5 @@
+require 'set'
+
 module GoodData::Bricks
   class SalesForceHistoryDownloader < BaseDownloader
 
@@ -16,6 +18,8 @@ module GoodData::Bricks
       objects = @params["salesforce_objects"]
       created_from = @params["salesforce_created_from"]
       created_to = @params["salesforce_created_to"]
+      history_objects = @params["salesforce_history_objects"] || []
+      historized_objects = Set.new(@params["salesforce_historized_objects"].keys)
 
       # save the information about download - sfdc server
       instance = bulk_client.instance_url
@@ -28,7 +32,7 @@ module GoodData::Bricks
       # create the directory if it doesn't exist
       Dir.mkdir(DIRNAME) if ! File.directory?(DIRNAME)
 
-      objects.each do |obj|
+      (objects + history_objects).each do |obj|
         name = "tmp/#{obj}-#{DateTime.now.to_i.to_s}.csv"
 
         obj_fields = get_fields(client, obj)
@@ -40,6 +44,7 @@ module GoodData::Bricks
           downloaded_info[:objects][obj] = {
             :fields => obj_fields,
             :filenames => main_data[:filenames].map {|f| File.absolute_path(f)},
+            :to_be_historized => historized_objects.member?(obj)
           }
         else
           # otherwise write it to csv
@@ -49,6 +54,7 @@ module GoodData::Bricks
             downloaded_info[:objects][obj] = {
               :fields => obj_fields,
               :filenames => [File.absolute_path(name)],
+              :to_be_historized => historized_objects.member?(obj)
             }
 
             # write the stuff to the csv
@@ -98,7 +104,6 @@ module GoodData::Bricks
           :filenames => result[:filenames]
         }
       rescue => e
-        require 'pry'; binding.pry
         logger.warn "Batch download failed. Now downloading through REST api instead" if logger
         # if not, try the normal api
         # recreate the query so that it contains the from and to dates

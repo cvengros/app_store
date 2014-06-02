@@ -1,0 +1,50 @@
+{
+  "salesforce_downloaded_info": {
+    "description": "A hash containing information about the downloaded data. 'objects' is a hash of downloaded objects, for each object it contains a key. Each object has another hash. 'fields' is a list of downloaded fields, each having a 'name' and 'type' according to salesforce describe method. 'filenames' is a list of filenames where the data was stored (absolute path). 'to_be_historized' indicates whether a snapshot table should be created for the object. 'salesforce_server' is url of the server from which data was downloaded. Ending with /.",
+    "example_value": {
+      "objects": {
+        "Opportunity": {
+          "fields": [
+            {
+              "name": "Id",
+              "type": "id"
+            },
+            {
+              "name": "Name",
+              "type": "string"
+            },
+          ],
+          "filenames": [
+            "/Users/pcv/Work/BAM_DSS/app_store/apps/salesapp_sfdc_to_dss/tmp/Opportunity_745U0000002BvaAIAS_2013-05-21T00:01:15+00:00-2014-05-28T23:08:06-07:00.csv"
+          ],
+          "to_be_historized": true
+        },
+        "Task": {
+          "fields": [
+            {
+              "name": "Id",
+              "type": "id"
+            },
+            {
+              "name": "WhoId",
+              "type": "reference"
+            },
+            {
+              "name": "WhatId",
+              "type": "reference"
+            },
+            {
+              "name": "ActivityDate",
+              "type": "date"
+            }
+          ],
+          "filenames": [
+            "/Users/pcv/Work/BAM_DSS/app_store/apps/salesapp_sfdc_to_dss/tmp/Task_751U0000002BvaAIAS_2013-05-21T00:01:15+00:00-2014-05-28T23:08:06-07:00.csv"
+          ]
+        },
+      },
+      "salesforce_server": "https://na12.salesforce.com/"
+    }
+  }
+}
+

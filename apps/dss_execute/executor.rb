@@ -26,6 +26,12 @@ module GoodData::Bricks
       table_hash.each do |table, table_meta|
         sql = get_create_sql(table, table_meta[:fields])
         execute(sql)
+
+        # if it should be historized create one more
+        if table_meta[:to_be_historized]
+          sql = get_create_sql(table, table_meta[:fields], true)
+          execute(sql)
+        end
       end
     end
 
@@ -52,11 +58,108 @@ module GoodData::Bricks
           end
         end
       end
+
+      @data_loaded = true
+    end
+
+    def load_historization_data(downloaded_info, historized_objects_params)
+      if ! @data_loaded
+        raise "No data loaded, nothing to shuffle to historized datasets. First load data with load_data."
+      end
+
+      first_load = first_load?
+      historized_objects_params.each do |object, hist_info|
+        # if we're doing the first load
+        if first_load
+          @logger.info "First load, so we're loading data from history object for #{object}" if @logger
+
+          # load data from history tables i.e. OpportunityHistory
+          load_from_params = historized_objects_params[object]["load_history_from"]
+
+          # for fields use the history object fields
+          fields = downloaded_info[:objects][load_from_params["name"]][:fields]
+
+          load_hist_sql = get_history_loading_sql(
+            object,
+            load_from_params,
+            fields
+          )
+          execute(load_hist_sql)
+        end
+        @logger.info "Merging data into history table for #{object}"
+        # merge the data from object tables last load i.e. Opportunity
+        merge_sql = get_historization_merge_sql(
+          object,
+          historized_objects_params[object]["merge_from"],
+          downloaded_info[:objects][object][:fields]
+        )
+        execute(merge_sql)
+      end
+    end
+
+
+    def get_history_loading_sql(object, load_history_from_params, object_fields)
+      snapshot_table_name = sql_table_name(object, true)
+      history_table_name = sql_table_name(load_history_from_params["name"])
+      dest_fields = load_history_from_params["column_mapping"].keys
+      src_fields = load_history_from_params["column_mapping"].values
+
+      all_fields = object_fields.map {|o| o[:name]}
+
+      common_fields = (Set.new(all_fields) - Set.new(dest_fields) - Set.new(src_fields)).to_a
+
+      field_list_dest = (dest_fields + common_fields).join(", ")
+      field_list_src = (src_fields + common_fields).join(", ")
+
+      sql = "INSERT INTO #{snapshot_table_name} (#{field_list_dest})\n"
+      sql += "SELECT #{field_list_src} \n"
+
+      sql += "FROM #{history_table_name} WHERE _LOAD_ID = (SELECT MAX(_LOAD_ID) FROM #{sql_table_name(LOAD_INFO_TABLE_NAME)})"
+      return sql
+    end
+
+    def get_historization_merge_sql(object, merge_from_params, object_fields)
+
+      # get all the params to be used
+      snapshot_table_name = sql_table_name(object, true)
+      object_table_name = sql_table_name(merge_from_params["name"])
+      fields = object_fields.map {|o| o[:name]}
+
+      sql = "MERGE  INTO #{snapshot_table_name} s USING #{object_table_name} o\n"
+
+      # finding matches in all fields
+      # string like s.Id = o.Id AND os.StageName = o.StageName
+      condition_string = fields.map {|f| "s.#{f} = o.#{f}"}.join(" AND ")
+
+      # TODO make sure we're only using the last load's data to merge
+      sql += "ON (#{condition_string})\n"
+
+      # when we find a match just update from the column mapping
+      col_mapping = merge_from_params["column_mapping"]
+      set_string = col_mapping.map {|dest, src| "#{dest} = o.#{src}"}.join(", ")
+      sql += "WHEN MATCHED THEN UPDATE SET #{set_string}\n"
+
+      # if not insert a new row from the (staging) Opportunity table
+      dest_string = (col_mapping.keys + fields).join(", ")
+      src_string = (col_mapping.values + fields).map{|f| "o.#{f}"}.join(", ")
+      sql += "WHEN NOT MATCHED THEN INSERT (#{dest_string}) VALUES (#{src_string})"
+
+      return sql
+    end
+
+    def first_load?
+      if @first_load.nil?
+        raise "you need to load something first to find out if it was the first load"
+      end
+
+      return @first_load
     end
 
     # .each{|t| puts "DROP TABLE dss_#{t};"}
 
     LOAD_INFO_TABLE_NAME = 'meta_loads'
+
+    LOAD_COUNT_SQL = 'SELECT COUNT(*) FROM dss_meta_loads'
 
     # save the info about the download
     # return the load id
@@ -67,6 +170,10 @@ module GoodData::Bricks
       # create the load table if it doesn't exist yet
       create_sql = get_create_sql(LOAD_INFO_TABLE_NAME, [{:name => 'Salesforce_Server'}])
       execute(create_sql)
+
+      # check out if it's a new load
+      count = execute_select(LOAD_COUNT_SQL, nil, true)
+      @first_load = (count == 0)
 
       # insert it there
       insert_sql = get_insert_sql(
@@ -239,7 +346,7 @@ module GoodData::Bricks
     end
 
     # executes sql (select), for each row, passes execution to block
-    def execute_select(sql, fetch_handler=nil)
+    def execute_select(sql, fetch_handler=nil, count=false)
       connect do |connection|
         # do the query
         f = connection.fetch(sql)
@@ -248,6 +355,10 @@ module GoodData::Bricks
         # if handler was passed call it
         if fetch_handler
           fetch_handler.call(f)
+        end
+
+        if count
+          return f.first[:count]
         end
 
         # go throug the rows returned and call the block
@@ -272,10 +383,11 @@ module GoodData::Bricks
 
     private
 
-    def sql_table_name(obj)
+    def sql_table_name(obj, historization=false)
       pr = @params["dss_table_prefix"]
       user_prefix = pr ? "#{pr}_" : ""
-      return "dss_#{user_prefix}#{obj}"
+      hist_postfix = historization ? "_snapshot" : ""
+      return "dss_#{user_prefix}#{obj}#{hist_postfix}"
     end
 
     def obj_name(sql_table)
@@ -284,10 +396,14 @@ module GoodData::Bricks
 
     ID_COLUMN = {"_oid" => "IDENTITY PRIMARY KEY"}
 
-    HISTORIZATION_COLUMNS = [
+    META_COLUMNS = [
       {"_LOAD_ID" => "VARCHAR(255)"},
       {"_INSERTED_AT" => "TIMESTAMP NOT NULL DEFAULT now()"},
       {"_IS_DELETED" => "boolean NOT NULL DEFAULT FALSE"},
+    ]
+
+    HISTORIZATION_COLUMNS = [
+      {"_SNAPSHOT_AT" => "TIMESTAMP"}
     ]
 
     TYPE_MAPPING = {
@@ -301,11 +417,20 @@ module GoodData::Bricks
 
     DEFAULT_TYPE = "VARCHAR (255)"
 
-    def get_create_sql(table, fields)
+    def get_col_strings(col_list)
+      return col_list.map {|col| "#{col.keys[0]} #{col.values[0]}"}.join(", ")
+    end
+
+    def get_create_sql(table, fields, historization=false)
       fields_string = fields.map{|f| "#{f[:name]} #{TYPE_MAPPING[f[:type]] || DEFAULT_TYPE}"}.join(", ")
-      hist_columns = HISTORIZATION_COLUMNS.map {|col| "#{col.keys[0]} #{col.values[0]}"}.join(", ")
-      return "CREATE TABLE IF NOT EXISTS #{sql_table_name(table)}
-      (#{ID_COLUMN.keys[0]} #{ID_COLUMN.values[0]}, #{fields_string}, #{hist_columns})"
+      meta_cols = get_col_strings(META_COLUMNS)
+      hist_cols = historization ? ", #{get_col_strings(HISTORIZATION_COLUMNS)}" : ""
+      # id column isn't used for historization tables as merge to tables with id doesn't work.
+      # it can be somehow faked using sequences
+      id_col = historization ? "" : "#{ID_COLUMN.keys[0]} #{ID_COLUMN.values[0]},"
+
+      return "CREATE TABLE IF NOT EXISTS #{sql_table_name(table, historization)}
+      (#{id_col} #{fields_string}, #{meta_cols} #{hist_cols})"
     end
 
     def get_except_filename(filename)
@@ -328,7 +453,7 @@ module GoodData::Bricks
 
     def get_extract_sql(table, columns)
       # TODO last snapshot
-      return "SELECT #{columns.join(',')} FROM #{table} WHERE _INSERTED_AT = (SELECT MAX(_LOAD_ID) FROM #{LOAD_INFO_TABLE_NAME})"
+      return "SELECT #{columns.join(',')} FROM #{table} WHERE _LOAD_ID = (SELECT MAX(_LOAD_ID) FROM #{sql_table_name(LOAD_INFO_TABLE_NAME)})"
     end
 
     def get_extract_load_info_sql
