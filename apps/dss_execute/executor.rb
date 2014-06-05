@@ -69,22 +69,35 @@ module GoodData::Bricks
 
       first_load = first_load?
       historized_objects_params.each do |object, hist_info|
-        # if we're doing the first load
+        # if we're doing the first load, load data from history table
         if first_load
-          @logger.info "First load, so we're loading data from history object for #{object}" if @logger
-
-          # load data from history tables i.e. OpportunityHistory
           load_from_params = historized_objects_params[object]["load_history_from"]
+          # if there's a table to load the history from
+          if load_from_params
+            @logger.info "First load and load_history_from given, so we're loading data from history object for #{object}" if @logger
 
-          # for fields use the history object fields
-          fields = downloaded_info[:objects][load_from_params["name"]][:fields]
+            # load data from history tables i.e. OpportunityHistory
+            load_from_params = historized_objects_params[object]["load_history_from"]
 
-          load_hist_sql = get_history_loading_sql(
-            object,
-            load_from_params,
-            fields
-          )
-          execute(load_hist_sql)
+            # for fields use the history object fields
+            if ! downloaded_info[:objects][load_from_params["name"]]
+              raise "The source for historized object #{load_from_params["name"]} is missing in the downloaded info: #{downloaded_info[:objects]}"
+            end
+            fields = downloaded_info[:objects][load_from_params["name"]][:fields]
+
+            load_hist_sql = get_history_loading_sql(
+              object,
+              load_from_params,
+              fields
+            )
+            execute(load_hist_sql)
+          end
+        else
+          @logger.info "Deleting old loads for #{object}" if @logger
+
+          # if it's not the first load only keep the latest load in the merge_from table
+          delete_sql = get_delete_but_last_load_sql(historized_objects_params[object]["merge_from"]["name"])
+          execute(delete_sql)
         end
         @logger.info "Merging data into history table for #{object}"
         # merge the data from object tables last load i.e. Opportunity
@@ -97,8 +110,16 @@ module GoodData::Bricks
       end
     end
 
+    def get_delete_but_last_load_sql(object)
+      table_name = sql_table_name(object)
+      return "DELETE FROM #{table_name} WHERE _LOAD_ID <> (SELECT MAX(_LOAD_ID) FROM #{sql_table_name(LOAD_INFO_TABLE_NAME)})"
+    end
+
 
     def get_history_loading_sql(object, load_history_from_params, object_fields)
+      if !@load_id
+        raise "load the data first! load_id is empty"
+      end
       snapshot_table_name = sql_table_name(object, true)
       history_table_name = sql_table_name(load_history_from_params["name"])
       dest_fields = load_history_from_params["column_mapping"].keys
@@ -108,8 +129,11 @@ module GoodData::Bricks
 
       common_fields = (Set.new(all_fields) - Set.new(dest_fields) - Set.new(src_fields)).to_a
 
-      field_list_dest = (dest_fields + common_fields).join(", ")
-      field_list_src = (src_fields + common_fields).join(", ")
+      dest_meta = ["_LOAD_ID", "_HASH"]
+      src_meta = [@load_id, get_hash_expression(src_fields + common_fields)]
+
+      field_list_dest = (dest_fields + common_fields + dest_meta).join(", ")
+      field_list_src = (src_fields + common_fields + src_meta).join(", ")
 
       sql = "INSERT INTO #{snapshot_table_name} (#{field_list_dest})\n"
       sql += "SELECT #{field_list_src} \n"
@@ -127,15 +151,16 @@ module GoodData::Bricks
 
       sql = "MERGE  INTO #{snapshot_table_name} s USING #{object_table_name} o\n"
 
-      # finding matches in all fields
+      # finding matches in all fields - in the hash
       # string like s.Id = o.Id AND os.StageName = o.StageName
-      condition_string = fields.map {|f| "s.#{f} = o.#{f}"}.join(" AND ")
 
-      # TODO make sure we're only using the last load's data to merge
-      sql += "ON (#{condition_string})\n"
+      sql += "ON (s._HASH = o._HASH)\n"
 
-      # when we find a match just update from the column mapping
-      col_mapping = merge_from_params["column_mapping"]
+      # when we find a match just update from the column mapping, plus the load id
+      col_mapping = merge_from_params["column_mapping"].merge({
+        "_LOAD_ID" => "_LOAD_ID",
+        "_HASH" => "_HASH"
+      })
       set_string = col_mapping.map {|dest, src| "#{dest} = o.#{src}"}.join(", ")
       sql += "WHEN MATCHED THEN UPDATE SET #{set_string}\n"
 
@@ -184,6 +209,10 @@ module GoodData::Bricks
         }
       )
       execute(insert_sql)
+
+      # save it for later
+      @load_id = load_id
+
       return load_id
     end
 
@@ -397,6 +426,7 @@ module GoodData::Bricks
     ID_COLUMN = {"_oid" => "IDENTITY PRIMARY KEY"}
 
     META_COLUMNS = [
+      {"_HASH" => "VARCHAR(1023)"},
       {"_LOAD_ID" => "VARCHAR(255)"},
       {"_INSERTED_AT" => "TIMESTAMP NOT NULL DEFAULT now()"},
       {"_IS_DELETED" => "boolean NOT NULL DEFAULT FALSE"},
@@ -412,10 +442,13 @@ module GoodData::Bricks
       "string" => "VARCHAR(255)",
       "double" => "DOUBLE PRECISION",
       "int" => "INTEGER",
-      "currency" => "DECIMAL"
+      # the vertica currency doesn't work well with parsing sfdc values
+      "currency" => "DECIMAL",
+      "boolean" => "BOOLEAN",
+      "textarea" => "VARCHAR(32769)"
     }
 
-    DEFAULT_TYPE = "VARCHAR (255)"
+    DEFAULT_TYPE = "VARCHAR(255)"
 
     def get_col_strings(col_list)
       return col_list.map {|col| "#{col.keys[0]} #{col.values[0]}"}.join(", ")
@@ -425,6 +458,7 @@ module GoodData::Bricks
       fields_string = fields.map{|f| "#{f[:name]} #{TYPE_MAPPING[f[:type]] || DEFAULT_TYPE}"}.join(", ")
       meta_cols = get_col_strings(META_COLUMNS)
       hist_cols = historization ? ", #{get_col_strings(HISTORIZATION_COLUMNS)}" : ""
+
       # id column isn't used for historization tables as merge to tables with id doesn't work.
       # it can be somehow faked using sequences
       id_col = historization ? "" : "#{ID_COLUMN.keys[0]} #{ID_COLUMN.values[0]},"
@@ -441,9 +475,30 @@ module GoodData::Bricks
       return "#{filename}.reject.log"
     end
 
+    HASH_LIMIT = 32
+
+    # fields is a list of strings
+    def get_hash_expression(fields)
+      field_list = fields.join(', ')
+
+      if fields.length <= HASH_LIMIT
+        return "HASH(#{field_list})"
+      end
+
+      hashes = fields.each_slice(HASH_LIMIT).map{|a| "HASH(#{a.join(', ')})"}
+      return hashes[1, hashes.length-1].reduce(hashes[0]) do |product, hsh|
+        "CONCAT(#{hsh}, #{product})"
+      end
+    end
+
     # filename is absolute
     def get_upload_sql(table, fields, filename, load_id)
-      return %Q{COPY #{sql_table_name(table)} (#{fields.map {|f| f[:name]}.join(', ')}, _LOAD_ID AS '#{load_id}')
+      field_string_list = fields.map {|f| f[:name]}
+      field_list = field_string_list.join(', ')
+
+      hash_exp = get_hash_expression(field_string_list)
+
+      return %Q{COPY #{sql_table_name(table)} (#{field_list}, _LOAD_ID AS '#{load_id}', _HASH AS #{hash_exp})
       FROM LOCAL '#{filename}' WITH PARSER GdcCsvParser()
       ESCAPE AS '"'
        SKIP 1
@@ -463,8 +518,9 @@ module GoodData::Bricks
 
     def get_insert_sql(table, column_values)
       columns = column_values.keys
-      values = column_values.values_at(*columns)
-      values_string = values.map {|e| "'#{e}'"}.join(',')
+      values = column_values.values_at(*columns) + [get_hash_expression(columns)]
+      columns.push("_HASH")
+      values_string = values.map {|e| "'#{e}'"}.join(', ')
 
       return "INSERT INTO #{table} (#{columns.join(',')}) VALUES (#{values_string})"
     end
