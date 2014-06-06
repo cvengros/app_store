@@ -2,6 +2,8 @@ require 'rubygems'
 require 'sequel'
 require 'jdbc/dss'
 
+require './apps/dss_execute/sql_generator'
+
 module GoodData::Bricks
   class DssExecutor
     def initialize(params)
@@ -24,12 +26,15 @@ module GoodData::Bricks
     def create_tables(table_hash)
       # create the tables one by one
       table_hash.each do |table, table_meta|
-        sql = get_create_sql(table, table_meta[:fields])
+        sql = SQLGenerator.create(table, table_meta[:fields])
         execute(sql)
+
+        sql_view = SQLGenerator.create_last_snapshot_view(table, table_meta[:fields])
+        execute(sql_view)
 
         # if it should be historized create one more
         if table_meta[:to_be_historized]
-          sql = get_create_sql(table, table_meta[:fields], true)
+          sql = SQLGenerator.create(table, table_meta[:fields], true)
           execute(sql)
         end
       end
@@ -49,11 +54,11 @@ module GoodData::Bricks
       # load the data for each table and each file to be loaded there
       table_hash.each do |table, table_meta|
         table_meta[:filenames].each do |filename|
-          sql = get_upload_sql(table, table_meta[:fields], filename, load_id)
+          sql = SQLGenerator.upload(table, table_meta[:fields], filename, load_id)
           execute(sql)
 
           # if there's something in the reject/except, raise an error
-          if File.size?(get_except_filename(filename)) || File.size?(get_reject_filename(filename))
+          if File.size?(SQLGenerator.except_filename(filename)) || File.size?(SQLGenerator.reject_filename(filename))
             raise "Some of the records were rejected: see #{filename}"
           end
         end
@@ -85,10 +90,11 @@ module GoodData::Bricks
             end
             fields = downloaded_info[:objects][load_from_params["name"]][:fields]
 
-            load_hist_sql = get_history_loading_sql(
+            load_hist_sql = SQLGenerator.history_loading(
               object,
               load_from_params,
-              fields
+              fields,
+              @load_id
             )
             execute(load_hist_sql)
           end
@@ -96,80 +102,18 @@ module GoodData::Bricks
           @logger.info "Deleting old loads for #{object}" if @logger
 
           # if it's not the first load only keep the latest load in the merge_from table
-          delete_sql = get_delete_but_last_load_sql(historized_objects_params[object]["merge_from"]["name"])
+          delete_sql = SQLGenerator.delete_but_last_load(historized_objects_params[object]["merge_from"]["name"])
           execute(delete_sql)
         end
         @logger.info "Merging data into history table for #{object}"
         # merge the data from object tables last load i.e. Opportunity
-        merge_sql = get_historization_merge_sql(
+        merge_sql = SQLGenerator.historization_merge(
           object,
           historized_objects_params[object]["merge_from"],
           downloaded_info[:objects][object][:fields]
         )
         execute(merge_sql)
       end
-    end
-
-    def get_delete_but_last_load_sql(object)
-      table_name = sql_table_name(object)
-      return "DELETE FROM #{table_name} WHERE _LOAD_ID <> (SELECT MAX(_LOAD_ID) FROM #{sql_table_name(LOAD_INFO_TABLE_NAME)})"
-    end
-
-
-    def get_history_loading_sql(object, load_history_from_params, object_fields)
-      if !@load_id
-        raise "load the data first! load_id is empty"
-      end
-      snapshot_table_name = sql_table_name(object, true)
-      history_table_name = sql_table_name(load_history_from_params["name"])
-      dest_fields = load_history_from_params["column_mapping"].keys
-      src_fields = load_history_from_params["column_mapping"].values
-
-      all_fields = object_fields.map {|o| o[:name]}
-
-      common_fields = (Set.new(all_fields) - Set.new(dest_fields) - Set.new(src_fields)).to_a
-
-      dest_meta = ["_LOAD_ID", "_HASH"]
-      src_meta = [@load_id, get_hash_expression(src_fields + common_fields)]
-
-      field_list_dest = (dest_fields + common_fields + dest_meta).join(", ")
-      field_list_src = (src_fields + common_fields + src_meta).join(", ")
-
-      sql = "INSERT INTO #{snapshot_table_name} (#{field_list_dest})\n"
-      sql += "SELECT #{field_list_src} \n"
-
-      sql += "FROM #{history_table_name} WHERE _LOAD_ID = (SELECT MAX(_LOAD_ID) FROM #{sql_table_name(LOAD_INFO_TABLE_NAME)})"
-      return sql
-    end
-
-    def get_historization_merge_sql(object, merge_from_params, object_fields)
-
-      # get all the params to be used
-      snapshot_table_name = sql_table_name(object, true)
-      object_table_name = sql_table_name(merge_from_params["name"])
-      fields = object_fields.map {|o| o[:name]}
-
-      sql = "MERGE  INTO #{snapshot_table_name} s USING #{object_table_name} o\n"
-
-      # finding matches in all fields - in the hash
-      # string like s.Id = o.Id AND os.StageName = o.StageName
-
-      sql += "ON (s._HASH = o._HASH)\n"
-
-      # when we find a match just update from the column mapping, plus the load id
-      col_mapping = merge_from_params["column_mapping"].merge({
-        "_LOAD_ID" => "_LOAD_ID",
-        "_HASH" => "_HASH"
-      })
-      set_string = col_mapping.map {|dest, src| "#{dest} = o.#{src}"}.join(", ")
-      sql += "WHEN MATCHED THEN UPDATE SET #{set_string}\n"
-
-      # if not insert a new row from the (staging) Opportunity table
-      dest_string = (col_mapping.keys + fields).join(", ")
-      src_string = (col_mapping.values + fields).map{|f| "o.#{f}"}.join(", ")
-      sql += "WHEN NOT MATCHED THEN INSERT (#{dest_string}) VALUES (#{src_string})"
-
-      return sql
     end
 
     def first_load?
@@ -182,10 +126,6 @@ module GoodData::Bricks
 
     # .each{|t| puts "DROP TABLE dss_#{t};"}
 
-    LOAD_INFO_TABLE_NAME = 'meta_loads'
-
-    LOAD_COUNT_SQL = 'SELECT COUNT(*) FROM dss_meta_loads'
-
     # save the info about the download
     # return the load id
     def save_download_info(downloaded_info)
@@ -193,20 +133,17 @@ module GoodData::Bricks
       load_id = Time.now.to_i
 
       # create the load table if it doesn't exist yet
-      create_sql = get_create_sql(LOAD_INFO_TABLE_NAME, [{:name => 'Salesforce_Server'}])
+      create_sql = SQLGenerator.create_loads
       execute(create_sql)
 
       # check out if it's a new load
-      count = execute_select(LOAD_COUNT_SQL, nil, true)
+      count = execute_select(SQLGenerator.load_count, nil, true)
       @first_load = (count == 0)
 
       # insert it there
-      insert_sql = get_insert_sql(
-        sql_table_name(LOAD_INFO_TABLE_NAME),
-        {
-          "Salesforce_Server" => downloaded_info[:salesforce_server],
-          "_LOAD_ID" => load_id
-        }
+      insert_sql = SQLGenerator.insert_load(
+        "Salesforce_Server" => downloaded_info[:salesforce_server],
+        "_LOAD_ID" => load_id
       )
       execute(insert_sql)
 
@@ -239,7 +176,7 @@ module GoodData::Bricks
           # get the columns and generate the sql
           columns = get_columns(ds_structure)
           columns_gd = columns[:gd]
-          sql = get_extract_sql(
+          sql = SQLGenerator.extract(
             ds_structure["source_table"],
             columns[:sql]
           )
@@ -278,11 +215,9 @@ module GoodData::Bricks
     end
 
     def table_has_column(table, column)
-      count = nil
-      execute_select("SELECT COUNT(column_name) FROM columns WHERE table_name = '#{table}' and column_name = '#{column}'") do |row|
+      sql = SQLGenerator.column_count(table, column)
+      count = execute_select(sql, nil, true)
 
-        count = row[:count]
-      end
       return count > 0
     end
 
@@ -357,13 +292,15 @@ module GoodData::Bricks
     def get_load_info
       # get information from the meta table latest row
       # return it in form source_column name -> value
-      select_sql = get_extract_load_info_sql
+      select_sql = SQLGenerator.extract_load_info
       info = {}
       execute_select(select_sql) do |row|
         info.merge!(row)
       end
       return info
     end
+
+    private
 
     # connect and pass execution to a block
     def connect
@@ -403,126 +340,12 @@ module GoodData::Bricks
         sql_strings = [sql_strings]
       end
       connect do |connection|
-          sql_strings.each do |sql|
-            @logger.info("Executing sql: #{sql}") if @logger
-            connection.run(sql)
-          end
+        sql_strings.each do |sql|
+          @logger.info("Executing sql: #{sql}") if @logger
+          connection.run(sql)
+        end
       end
     end
 
-    private
-
-    def sql_table_name(obj, historization=false)
-      pr = @params["dss_table_prefix"]
-      user_prefix = pr ? "#{pr}_" : ""
-      hist_postfix = historization ? "_snapshot" : ""
-      return "dss_#{user_prefix}#{obj}#{hist_postfix}"
-    end
-
-    def obj_name(sql_table)
-      return sql_table[4..-1]
-    end
-
-    ID_COLUMN = {"_oid" => "IDENTITY PRIMARY KEY"}
-
-    META_COLUMNS = [
-      {"_HASH" => "VARCHAR(1023)"},
-      {"_LOAD_ID" => "VARCHAR(255)"},
-      {"_INSERTED_AT" => "TIMESTAMP NOT NULL DEFAULT now()"},
-      {"_IS_DELETED" => "boolean NOT NULL DEFAULT FALSE"},
-    ]
-
-    HISTORIZATION_COLUMNS = [
-      {"_SNAPSHOT_AT" => "TIMESTAMP"}
-    ]
-
-    TYPE_MAPPING = {
-      "date" => "DATE",
-      "datetime" => "TIMESTAMP",
-      "string" => "VARCHAR(255)",
-      "double" => "DOUBLE PRECISION",
-      "int" => "INTEGER",
-      # the vertica currency doesn't work well with parsing sfdc values
-      "currency" => "DECIMAL",
-      "boolean" => "BOOLEAN",
-      "textarea" => "VARCHAR(32769)"
-    }
-
-    DEFAULT_TYPE = "VARCHAR(255)"
-
-    def get_col_strings(col_list)
-      return col_list.map {|col| "#{col.keys[0]} #{col.values[0]}"}.join(", ")
-    end
-
-    def get_create_sql(table, fields, historization=false)
-      fields_string = fields.map{|f| "#{f[:name]} #{TYPE_MAPPING[f[:type]] || DEFAULT_TYPE}"}.join(", ")
-      meta_cols = get_col_strings(META_COLUMNS)
-      hist_cols = historization ? ", #{get_col_strings(HISTORIZATION_COLUMNS)}" : ""
-
-      # id column isn't used for historization tables as merge to tables with id doesn't work.
-      # it can be somehow faked using sequences
-      id_col = historization ? "" : "#{ID_COLUMN.keys[0]} #{ID_COLUMN.values[0]},"
-
-      return "CREATE TABLE IF NOT EXISTS #{sql_table_name(table, historization)}
-      (#{id_col} #{fields_string}, #{meta_cols} #{hist_cols})"
-    end
-
-    def get_except_filename(filename)
-      return "#{filename}.except.log"
-    end
-
-    def get_reject_filename(filename)
-      return "#{filename}.reject.log"
-    end
-
-    HASH_LIMIT = 32
-
-    # fields is a list of strings
-    def get_hash_expression(fields)
-      field_list = fields.join(', ')
-
-      if fields.length <= HASH_LIMIT
-        return "HASH(#{field_list})"
-      end
-
-      hashes = fields.each_slice(HASH_LIMIT).map{|a| "HASH(#{a.join(', ')})"}
-      return hashes[1, hashes.length-1].reduce(hashes[0]) do |product, hsh|
-        "CONCAT(#{hsh}, #{product})"
-      end
-    end
-
-    # filename is absolute
-    def get_upload_sql(table, fields, filename, load_id)
-      field_string_list = fields.map {|f| f[:name]}
-      field_list = field_string_list.join(', ')
-
-      hash_exp = get_hash_expression(field_string_list)
-
-      return %Q{COPY #{sql_table_name(table)} (#{field_list}, _LOAD_ID AS '#{load_id}', _HASH AS #{hash_exp})
-      FROM LOCAL '#{filename}' WITH PARSER GdcCsvParser()
-      ESCAPE AS '"'
-       SKIP 1
-      EXCEPTIONS '#{get_except_filename(filename)}'
-      REJECTED DATA '#{get_reject_filename(filename)}' }
-    end
-
-    def get_extract_sql(table, columns)
-      # TODO last snapshot
-      return "SELECT #{columns.join(',')} FROM #{table} WHERE _LOAD_ID = (SELECT MAX(_LOAD_ID) FROM #{sql_table_name(LOAD_INFO_TABLE_NAME)})"
-    end
-
-    def get_extract_load_info_sql
-      table_name = sql_table_name(LOAD_INFO_TABLE_NAME)
-      return "SELECT * FROM #{table_name} WHERE _INSERTED_AT = (SELECT MAX(_INSERTED_AT) FROM #{table_name})"
-    end
-
-    def get_insert_sql(table, column_values)
-      columns = column_values.keys
-      values = column_values.values_at(*columns) + [get_hash_expression(columns)]
-      columns.push("_HASH")
-      values_string = values.map {|e| "'#{e}'"}.join(', ')
-
-      return "INSERT INTO #{table} (#{columns.join(',')}) VALUES (#{values_string})"
-    end
   end
 end
