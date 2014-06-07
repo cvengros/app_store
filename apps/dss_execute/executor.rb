@@ -24,6 +24,11 @@ module GoodData::Bricks
     # table name ->
     #   :fields -> list of columns
     def create_tables(table_hash)
+
+      # create the load table if it doesn't exist yet
+      create_sql = SQLGenerator.create_loads
+      execute(create_sql)
+
       # create the tables one by one
       table_hash.each do |table, table_meta|
         sql = SQLGenerator.create(table, table_meta[:fields])
@@ -131,10 +136,6 @@ module GoodData::Bricks
     def save_download_info(downloaded_info)
       # generate load id
       load_id = Time.now.to_i
-
-      # create the load table if it doesn't exist yet
-      create_sql = SQLGenerator.create_loads
-      execute(create_sql)
 
       # check out if it's a new load
       count = execute_select(SQLGenerator.load_count, nil, true)

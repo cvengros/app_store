@@ -45,14 +45,22 @@ module GoodData::Bricks
         if !load_id
           raise "load the data first! load_id is empty"
         end
+
         snapshot_table_name = sql_table_name(object, true)
         history_table_name = sql_table_name(load_history_from_params["name"])
-        dest_fields = load_history_from_params["column_mapping"].keys
-        src_fields = load_history_from_params["column_mapping"].values
+        # those that are mapped to nil, are ignored
+        ignored_fields = load_history_from_params["column_mapping"].select {|f, t| !t}.keys
+        valid_mappings = load_history_from_params["column_mapping"].select {|f,t| t}
+
+        # fields to load to
+        dest_fields = valid_mappings.keys
+
+        # fields to load from
+        src_fields = valid_mappings.values
 
         all_fields = object_fields.map {|o| o[:name]}
 
-        common_fields = (Set.new(all_fields) - Set.new(dest_fields) - Set.new(src_fields)).to_a
+        common_fields = (Set.new(all_fields) - Set.new(dest_fields) - Set.new(src_fields) - Set.new(ignored_fields)).to_a
 
         dest_meta = ["_LOAD_ID", "_HASH"]
         src_meta = [load_id, hash_expression(src_fields + common_fields)]

@@ -3,5 +3,6 @@ bin
 .DS_Store
 *.pdf
 *.csv
+bordel-*
 apps/*/tmp*/*
 apps/*/params.json

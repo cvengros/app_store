@@ -11,13 +11,13 @@ SELECT
     pe.Product2Id AS product_id_id,
     o.StageName AS stage_id_id
 
-FROM (SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM dss_Task  WHERE _INSERTED_AT = (SELECT MAX(_INSERTED_AT) FROM dss_Task)
+FROM (SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM dss_Task_last_snapshot
     UNION
-    SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM dss_Event  WHERE _INSERTED_AT = (SELECT MAX(_INSERTED_AT) FROM dss_Event)
+    SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM dss_Event_last_snapshot
     ) a
-    LEFT OUTER JOIN (SELECT * FROM dss_Opportunity WHERE _INSERTED_AT = (SELECT MAX(_INSERTED_AT) FROM dss_Opportunity))  o
+    LEFT OUTER JOIN (SELECT * FROM dss_Opportunity_last_snapshot)  o
 ON a.WhatId = o.Id
-    LEFT OUTER JOIN (SELECT * FROM dss_OpportunityLineItem WHERE _INSERTED_AT = (SELECT MAX(_INSERTED_AT) FROM dss_PricebookEntry)) oli
+    LEFT OUTER JOIN (SELECT * FROM dss_OpportunityLineItem_last_snapshot) oli
 ON o.Id = oli.OpportunityId
-    LEFT OUTER JOIN (SELECT * FROM dss_PricebookEntry WHERE  _INSERTED_AT = (SELECT MAX(_INSERTED_AT) FROM dss_PricebookEntry)) pe
+    LEFT OUTER JOIN (SELECT * FROM dss_PricebookEntry_last_snapshot) pe
 ON oli.PricebookEntryId = pe.Id
