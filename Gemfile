@@ -14,4 +14,4 @@ gem "restforce"
 gem "pry"
 gem "sequel"
 gem "salesforce_bulk_query"
-gem "gooddata-dss-jdbc", ">=0.1.1", :require => 'jdbc/dss', :path => '../gooddata-dss-ruby/jdbc-dss'
+gem "gooddata-dss-jdbc"

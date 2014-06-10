@@ -11,15 +11,8 @@ SELECT
     TO_CHAR(o.CloseDate, 'DD/MM/YYYY') as close_date,
     o.ForecastCategoryName as forecast_id_id
 
-FROM (SELECT * FROM dss_Opportunity_last_snapshot)  o
-    LEFT OUTER JOIN (SELECT * FROM dss_OpportunityLineItem_last_snapshot) oli
+FROM dss_Opportunity_last_snapshot o
+    LEFT OUTER JOIN dss_OpportunityLineItem_last_snapshot oli
 ON o.Id = oli.OpportunityId
-    LEFT OUTER JOIN (SELECT * FROM dss_PricebookEntry_last_snapshot) pe
+    LEFT OUTER JOIN dss_PricebookEntry_last_snapshot pe
 ON oli.PricebookEntryId = pe.Id
-
-
-
-
-
-
-

@@ -15,9 +15,9 @@ FROM (SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM dss_Task_last_sna
     UNION
     SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM dss_Event_last_snapshot
     ) a
-    LEFT OUTER JOIN (SELECT * FROM dss_Opportunity_last_snapshot)  o
+    LEFT OUTER JOIN dss_Opportunity_last_snapshot o
 ON a.WhatId = o.Id
-    LEFT OUTER JOIN (SELECT * FROM dss_OpportunityLineItem_last_snapshot) oli
+    LEFT OUTER JOIN dss_OpportunityLineItem_last_snapshot oli
 ON o.Id = oli.OpportunityId
-    LEFT OUTER JOIN (SELECT * FROM dss_PricebookEntry_last_snapshot) pe
+    LEFT OUTER JOIN dss_PricebookEntry_last_snapshot pe
 ON oli.PricebookEntryId = pe.Id
