@@ -31,15 +31,16 @@ module GoodData::Bricks
 
       # create the tables one by one
       table_hash.each do |table, table_meta|
-        sql = SQLGenerator.create(table, table_meta[:fields])
+        fields = table_meta[:fields] || table_meta['fields']
+        sql = SQLGenerator.create(table, fields)
         execute(sql)
 
-        sql_view = SQLGenerator.create_last_snapshot_view(table, table_meta[:fields])
+        sql_view = SQLGenerator.create_last_snapshot_view(table, fields)
         execute(sql_view)
 
         # if it should be historized create one more
-        if table_meta[:to_be_historized]
-          sql = SQLGenerator.create(table, table_meta[:fields], true)
+        if table_meta[:to_be_historized] || table_meta['to_be_historized']
+          sql = SQLGenerator.create(table, fields, true)
           execute(sql)
         end
       end
@@ -54,12 +55,12 @@ module GoodData::Bricks
       # save the info and load the tables
       load_id = save_download_info(downloaded_info)
 
-      table_hash = downloaded_info[:objects]
+      table_hash = downloaded_info[:objects] || downloaded_info['objects']
 
       # load the data for each table and each file to be loaded there
       table_hash.each do |table, table_meta|
-        table_meta[:filenames].each do |filename|
-          sql = SQLGenerator.upload(table, table_meta[:fields], filename, load_id)
+        (table_meta[:filenames] || table_meta['filenames']).each do |filename|
+          sql = SQLGenerator.upload(table, table_meta[:fields] || table_meta['fields'], filename, load_id)
           execute(sql)
 
           # if there's something in the reject/except, raise an error
@@ -78,7 +79,7 @@ module GoodData::Bricks
       end
 
       first_load = first_load?
-      historized_objects_params.each do |object, hist_info|
+      (historized_objects_params || []).each do |object, hist_info|
         # if we're doing the first load, load data from history table
         if first_load
           load_from_params = historized_objects_params[object]["load_history_from"]
@@ -90,10 +91,10 @@ module GoodData::Bricks
             load_from_params = historized_objects_params[object]["load_history_from"]
 
             # for fields use the history object fields
-            if ! downloaded_info[:objects][load_from_params["name"]]
+            if ! (downloaded_info[:objects] || downloaded_info['objects'])[load_from_params["name"]]
               raise "The source for historized object #{load_from_params["name"]} is missing in the downloaded info: #{downloaded_info[:objects]}"
             end
-            fields = downloaded_info[:objects][load_from_params["name"]][:fields]
+            fields = (downloaded_info[:objects] || downloaded_info['objects'])[load_from_params["name"]][:fields] || (downloaded_info[:objects] || downloaded_info['objects'])[load_from_params["name"]]['fields']
 
             load_hist_sql = SQLGenerator.history_loading(
               object,
@@ -115,7 +116,7 @@ module GoodData::Bricks
         merge_sql = SQLGenerator.historization_merge(
           object,
           historized_objects_params[object]["merge_from"],
-          downloaded_info[:objects][object][:fields]
+          (downloaded_info[:objects] || downloaded_info['objects'])[object][:fields] || (downloaded_info[:objects] || downloaded_info['objects'])[object]['fields']
         )
         execute(merge_sql)
       end

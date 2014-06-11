@@ -1,18 +1,20 @@
 require 'gooddata'
-require 'json'
-
-require '../salesforce_history_downloader/downloader'
+require 'restforce'
+require './salesforce_bulk_downloader'
 
 include GoodData::Bricks
 
-module GoodData::Bricks
-
-  # Downloading from SFDC
-  class SalesforceBulkDownloaderMiddleware < GoodData::Bricks::Middleware
-    def call(params)
-      downloaded_info = GoodData::Bricks::SalesForceHistoryDownloader.new(params).run
-      params["GDC_LOGGER"].info "Download finished. This is the info (use in params if you want to upload later: #{JSON.pretty_generate({:salesforce_downloaded_info => downloaded_info})}" if params["GDC_LOGGER"]
-      @app.call(params.merge(:salesforce_downloaded_info => downloaded_info))
-    end
-  end
+Restforce.configure do |config|
+  config.api_version = '29.0'
+  config.timeout = 30
 end
+
+p = GoodData::Bricks::Pipeline.prepare([
+  LoggerMiddleware,
+  BenchMiddleware,
+  RestForceMiddleware,
+  BulkSalesforceMiddleware,
+  SalesforceBulkDownloaderBrick
+])
+
+p.call($SCRIPT_PARAMS)

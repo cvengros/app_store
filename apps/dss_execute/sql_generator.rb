@@ -17,7 +17,7 @@ module GoodData::Bricks
       end
 
       def create_last_snapshot_view(object, fields)
-        field_names = fields.map {|f| f[:name]}.join(', ')
+        field_names = fields.map {|f| f[:name] || f['name']}.join(', ')
         return "CREATE OR REPLACE VIEW #{sql_view_name(object, :last_snapshot => true)} AS SELECT #{field_names}, _LOAD_ID, _INSERTED_AT FROM #{sql_table_name(object)} WHERE _LOAD_ID = (SELECT MAX(_LOAD_ID) FROM #{sql_table_name(LOAD_INFO_TABLE_NAME)})"
       end
 
@@ -28,7 +28,7 @@ module GoodData::Bricks
 
       # filename is absolute
       def upload(table, fields, filename, load_id)
-        field_string_list = fields.map {|f| f[:name]}
+        field_string_list = fields.map {|f| f[:name] || f['name']}
         field_list = field_string_list.join(', ')
 
         hash_exp = hash_expression(field_string_list)
@@ -58,7 +58,7 @@ module GoodData::Bricks
         # fields to load from
         src_fields = valid_mappings.values
 
-        all_fields = object_fields.map {|o| o[:name]}
+        all_fields = object_fields.map {|o| o[:name] || o['name']}
 
         common_fields = (Set.new(all_fields) - Set.new(dest_fields) - Set.new(src_fields) - Set.new(ignored_fields)).to_a
 
@@ -84,7 +84,7 @@ module GoodData::Bricks
       end
 
       def create(table, fields, historization=false)
-        fields_string = fields.map{|f| "#{f[:name]} #{TYPE_MAPPING[f[:type]] || DEFAULT_TYPE}"}.join(", ")
+        fields_string = fields.map{|f| "#{f[:name] || f['name']} #{TYPE_MAPPING[f[:type] || f['type']] || DEFAULT_TYPE}"}.join(", ")
         meta_cols = col_strings(META_COLUMNS)
         hist_cols = historization ? ", #{col_strings(HISTORIZATION_COLUMNS)}" : ""
 
@@ -110,7 +110,7 @@ module GoodData::Bricks
         # get all the params to be used
         snapshot_table_name = sql_table_name(object, true)
         object_table_name = sql_table_name(merge_from_params["name"])
-        fields = object_fields.map {|o| o[:name]}
+        fields = object_fields.map {|o| o[:name] || o['name']}
 
         sql = "MERGE  INTO #{snapshot_table_name} s USING #{object_table_name} o\n"
 

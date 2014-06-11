@@ -19,7 +19,7 @@ module GoodData::Bricks
       created_from = @params["salesforce_created_from"]
       created_to = @params["salesforce_created_to"]
       history_objects = @params["salesforce_history_objects"] || []
-      historized_objects = Set.new(@params["salesforce_historized_objects"].keys)
+      historized_objects = Set.new(@params["salesforce_historized_objects"] ? @params["salesforce_historized_objects"].keys : [])
 
       # save the information about download - sfdc server
       instance = bulk_client.instance_url

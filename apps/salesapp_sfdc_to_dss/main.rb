@@ -1,7 +1,7 @@
 require 'gooddata'
 require 'restforce'
-require '../dss_save/main'
-require '../salesforce_bulk_downloader/main'
+require '../dss_save/dss_save'
+require '../salesforce_bulk_downloader/salesforce_bulk_downloader'
 
 include GoodData::Bricks
 
