@@ -104,6 +104,7 @@ module GoodData::Bricks
           :filenames => result[:filenames]
         }
       rescue => e
+        logger.error "#{e.message}\n\n#{e.backtrace.join("\n")}"
         logger.warn "Batch download failed. Now downloading through REST api instead" if logger
         # if not, try the normal api
         # recreate the query so that it contains the from and to dates
