@@ -11,13 +11,13 @@ SELECT
     pe.Product2Id AS product_id_id,
     o.StageName AS stage_id_id
 
-FROM (SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM dss_Task_last_snapshot
+FROM (SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM sfdc_Task_last_snapshot
     UNION
-    SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM dss_Event_last_snapshot
+    SELECT ActivityDate, Id, AccountId, WhatId, OwnerId FROM sfdc_Event_last_snapshot
     ) a
-    LEFT OUTER JOIN dss_Opportunity_last_snapshot o
+    LEFT OUTER JOIN sfdc_Opportunity_last_snapshot o
 ON a.WhatId = o.Id
-    LEFT OUTER JOIN dss_OpportunityLineItem_last_snapshot oli
+    LEFT OUTER JOIN sfdc_OpportunityLineItem_last_snapshot oli
 ON o.Id = oli.OpportunityId
-    LEFT OUTER JOIN dss_PricebookEntry_last_snapshot pe
+    LEFT OUTER JOIN sfdc_PricebookEntry_last_snapshot pe
 ON oli.PricebookEntryId = pe.Id

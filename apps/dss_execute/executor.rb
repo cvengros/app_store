@@ -15,6 +15,8 @@ module GoodData::Bricks
       @params = params
       @logger = @params["GDC_LOGGER"]
 
+      @generator = SQLGenerator.new(params)
+
 
       Jdbc::DSS.load_driver
       Java.com.gooddata.dss.jdbc.driver.DssDriver
@@ -26,21 +28,21 @@ module GoodData::Bricks
     def create_tables(table_hash)
 
       # create the load table if it doesn't exist yet
-      create_sql = SQLGenerator.create_loads
+      create_sql = @generator.create_loads([{:name => 'salesforce_server'}])
       execute(create_sql)
 
       # create the tables one by one
       table_hash.each do |table, table_meta|
         fields = table_meta[:fields] || table_meta['fields']
-        sql = SQLGenerator.create(table, fields)
+        sql = @generator.create(table, fields)
         execute(sql)
 
-        sql_view = SQLGenerator.create_last_snapshot_view(table, fields)
+        sql_view = @generator.create_last_snapshot_view(table, fields)
         execute(sql_view)
 
         # if it should be historized create one more
         if table_meta[:to_be_historized] || table_meta['to_be_historized']
-          sql = SQLGenerator.create(table, fields, true)
+          sql = @generator.create(table, fields, true)
           execute(sql)
         end
       end
@@ -53,18 +55,18 @@ module GoodData::Bricks
     def load_data(downloaded_info)
 
       # save the info and load the tables
-      load_id = save_download_info(downloaded_info)
+      save_download_info(downloaded_info)
 
       table_hash = downloaded_info[:objects] || downloaded_info['objects']
 
       # load the data for each table and each file to be loaded there
       table_hash.each do |table, table_meta|
         (table_meta[:filenames] || table_meta['filenames']).each do |filename|
-          sql = SQLGenerator.upload(table, table_meta[:fields] || table_meta['fields'], filename, load_id)
+          sql = @generator.upload(table, table_meta[:fields] || table_meta['fields'], filename, @load_id, @load_at)
           execute(sql)
 
           # if there's something in the reject/except, raise an error
-          if File.size?(SQLGenerator.except_filename(filename)) || File.size?(SQLGenerator.reject_filename(filename))
+          if File.size?(@generator.except_filename(filename)) || File.size?(@generator.reject_filename(filename))
             raise "Some of the records were rejected: see #{filename}"
           end
         end
@@ -96,11 +98,12 @@ module GoodData::Bricks
             end
             fields = (downloaded_info[:objects] || downloaded_info['objects'])[load_from_params["name"]][:fields] || (downloaded_info[:objects] || downloaded_info['objects'])[load_from_params["name"]]['fields']
 
-            load_hist_sql = SQLGenerator.history_loading(
+            load_hist_sql = @generator.history_loading(
               object,
               load_from_params,
               fields,
-              @load_id
+              @load_id,
+              @load_at
             )
             execute(load_hist_sql)
           end
@@ -108,12 +111,12 @@ module GoodData::Bricks
           @logger.info "Deleting old loads for #{object}" if @logger
 
           # if it's not the first load only keep the latest load in the merge_from table
-          delete_sql = SQLGenerator.delete_but_last_load(historized_objects_params[object]["merge_from"]["name"])
+          delete_sql = @generator.delete_but_last_load(historized_objects_params[object]["merge_from"]["name"])
           execute(delete_sql)
         end
         @logger.info "Merging data into history table for #{object}"
         # merge the data from object tables last load i.e. Opportunity
-        merge_sql = SQLGenerator.historization_merge(
+        merge_sql = @generator.historization_merge(
           object,
           historized_objects_params[object]["merge_from"],
           (downloaded_info[:objects] || downloaded_info['objects'])[object][:fields] || (downloaded_info[:objects] || downloaded_info['objects'])[object]['fields']
@@ -136,20 +139,23 @@ module GoodData::Bricks
     # return the load id
     def save_download_info(downloaded_info)
       # generate load id
-      load_id = Time.now.to_i
+      load_at = Time.now
+      load_id = load_at.to_i
 
       # check out if it's a new load
-      count = execute_select(SQLGenerator.load_count, nil, true)
+      count = execute_select(@generator.load_count, nil, true)
       @first_load = (count == 0)
 
       # insert it there
-      insert_sql = SQLGenerator.insert_load(
-        "Salesforce_Server" => downloaded_info[:salesforce_server],
-        "_LOAD_ID" => load_id
+      insert_sql = @generator.insert_load(
+        "salesforce_server" => downloaded_info[:salesforce_server] || downloaded_info['salesforce_server'],
+        "_LOAD_ID" => load_id,
+        "_LOAD_AT" => load_at
       )
       execute(insert_sql)
 
       # save it for later
+      @load_at = load_at
       @load_id = load_id
 
       return load_id
@@ -178,8 +184,8 @@ module GoodData::Bricks
           # get the columns and generate the sql
           columns = get_columns(ds_structure)
           columns_gd = columns[:gd]
-          sql = SQLGenerator.extract(
-            ds_structure["source_table"],
+          sql = @generator.extract(
+            ds_structure["source_object"],
             columns[:sql]
           )
         end
@@ -216,8 +222,8 @@ module GoodData::Bricks
       return datasets
     end
 
-    def table_has_column(table, column)
-      sql = SQLGenerator.column_count(table, column)
+    def object_has_field(object, field)
+      sql = @generator.column_count(object, field)
       count = execute_select(sql, nil, true)
 
       return count > 0
@@ -246,7 +252,7 @@ module GoodData::Bricks
             raise "source column must be given for optional: #{f}"
           end
 
-          if ! table_has_column(ds_structure["source_table"], source_column)
+          if ! object_has_field(ds_structure["source_table"], source_column)
             columns_sql.push("'' AS #{csv_column_name}")
             next
           end
@@ -274,7 +280,14 @@ module GoodData::Bricks
           concat_strings = s["source_column_concat"].map do |c|
             # if it's a symbol get it from the load params
             if c[0] == ":"
-              "'#{@params[:salesforce_downloaded_info][c[1..-1].to_sym]}'"
+              param_name = c[1..-1].to_sym
+              param_value = @params[:salesforce_downloaded_info][param_name]
+
+              # if it's not in params raise an error
+              if ! param_value
+                raise "The parameter #{param_name} is missing in meta params: #{@params[:salesforce_downloaded_info]}"
+              end
+              "'#{param_value}'"
             else
               # take the value as it is, including apostrophes if any
               c
@@ -294,7 +307,7 @@ module GoodData::Bricks
     def get_load_info
       # get information from the meta table latest row
       # return it in form source_column name -> value
-      select_sql = SQLGenerator.extract_load_info
+      select_sql = @generator.extract_load_info
       info = {}
       execute_select(select_sql) do |row|
         info.merge!(row)

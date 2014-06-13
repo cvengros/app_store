@@ -8,13 +8,13 @@
           "name": "OpportunityHistory",
           "column_mapping": {
             "Id": "OpportunityId",
-            "_SNAPSHOT_AT": "SystemModstamp"
+            "_VALID_FROM": "SystemModstamp"
           }
         },
         "merge_from": {
           "name": "Opportunity",
           "column_mapping": {
-            "_SNAPSHOT_AT": "_INSERTED_AT"
+            "_VALID_FROM": "_INSERTED_AT"
           }
         }
       }

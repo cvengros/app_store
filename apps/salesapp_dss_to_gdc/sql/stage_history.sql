@@ -13,7 +13,7 @@ FROM (
     DATEDIFF(day,
         date_entered_stage,
         -- date the next stage was entered
-        ISNULL(LEAD(os.date_entered_stage) OVER (PARTITION BY Id ORDER BY _SNAPSHOT_AT), last_snapshot)
+        ISNULL(LEAD(os.date_entered_stage) OVER (PARTITION BY Id ORDER BY _VALID_FROM), last_snapshot)
     ) AS stage_duration,
     DATEDIFF(day,
       CreatedDate_last_version,
@@ -30,25 +30,25 @@ FROM (
       Id,
       StageName,
       -- the first snapshot when it was in that stage
-      FIRST_VALUE(_SNAPSHOT_AT) OVER (PARTITION BY Id, StageName  ORDER BY _SNAPSHOT_AT) AS date_entered_stage,
+      FIRST_VALUE(_VALID_FROM) OVER (PARTITION BY Id, StageName  ORDER BY _VALID_FROM) AS date_entered_stage,
       -- stage on the previous line
-      LAG(StageName) OVER (PARTITION BY Id ORDER BY _SNAPSHOT_AT)  AS previous_line_stage,
+      LAG(StageName) OVER (PARTITION BY Id ORDER BY _VALID_FROM)  AS previous_line_stage,
       Name,
       -- current column values
-      FIRST_VALUE(Name) OVER (PARTITION BY Id ORDER BY _SNAPSHOT_AT DESC) AS Name_last_version,
-      FIRST_VALUE(AccountId) OVER (PARTITION BY Id ORDER BY _SNAPSHOT_AT DESC) AS AccountId_last_version,
-      FIRST_VALUE(OwnerId) OVER (PARTITION BY Id ORDER BY _SNAPSHOT_AT DESC) AS OwnerId_last_version,
-      FIRST_VALUE(CreatedDate) OVER (PARTITION BY Id ORDER BY _SNAPSHOT_AT DESC) AS CreatedDate_last_version,
-      FIRST_VALUE(CloseDate) OVER (PARTITION BY Id ORDER BY _SNAPSHOT_AT DESC) AS CloseDate_last_version,
-      FIRST_VALUE(_SNAPSHOT_AT) OVER (PARTITION BY Id ORDER BY _SNAPSHOT_AT DESC) AS last_snapshot,
-      _SNAPSHOT_AT
+      FIRST_VALUE(Name) OVER (PARTITION BY Id ORDER BY _VALID_FROM DESC) AS Name_last_version,
+      FIRST_VALUE(AccountId) OVER (PARTITION BY Id ORDER BY _VALID_FROM DESC) AS AccountId_last_version,
+      FIRST_VALUE(OwnerId) OVER (PARTITION BY Id ORDER BY _VALID_FROM DESC) AS OwnerId_last_version,
+      FIRST_VALUE(CreatedDate) OVER (PARTITION BY Id ORDER BY _VALID_FROM DESC) AS CreatedDate_last_version,
+      FIRST_VALUE(CloseDate) OVER (PARTITION BY Id ORDER BY _VALID_FROM DESC) AS CloseDate_last_version,
+      FIRST_VALUE(_VALID_FROM) OVER (PARTITION BY Id ORDER BY _VALID_FROM DESC) AS last_snapshot,
+      _VALID_FROM
 
-    FROM  dss_Opportunity_snapshot
+    FROM  sfdc_Opportunity
   ) os
   WHERE os.previous_line_stage is NULL OR os.previous_line_stage <> os.StageName
 ) sc
-LEFT OUTER JOIN dss_OpportunityLineItem_last_snapshot oli
+LEFT OUTER JOIN sfdc_OpportunityLineItem_last_snapshot oli
 ON sc.Id = oli.OpportunityId
 
-LEFT OUTER JOIN dss_PricebookEntry_last_snapshot pe
+LEFT OUTER JOIN sfdc_PricebookEntry_last_snapshot pe
 ON oli.PricebookEntryId = pe.Id
