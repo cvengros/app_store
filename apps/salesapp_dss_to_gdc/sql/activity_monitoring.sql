@@ -1,5 +1,5 @@
 SELECT
-    a.Id AS activity_id,
+    '0' AS dummy,
     TO_CHAR(a.ActivityDate, 'DD/MM/YYYY') AS activity_date,
     TO_CHAR(o.CreatedDate, 'DD/MM/YYYY') AS opp_created_date,
     TO_CHAR(o.CloseDate, 'DD/MM/YYYY') as opp_close_date,
