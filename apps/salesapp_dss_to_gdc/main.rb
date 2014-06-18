@@ -5,7 +5,7 @@ include GoodData::Bricks
 
 module GoodData::Bricks
   # takes stuff from dss and puts it into a csv
-  class ExtractFromDssMiddleware < GoodData::Bricks::Middleware
+  class DssExtractMiddleware < GoodData::Bricks::Middleware
     def call(params)
       executor = GoodData::Bricks::DssExecutor.new(params)
 
@@ -15,7 +15,7 @@ module GoodData::Bricks
   end
 
   # takes csvs and loads them to gd
-  class LoadToGoodDataBrick
+  class GoodDataLoadBrick
     def call(params)
       if ! params["gooddata_model_url"]
         raise "missing gooddata_model_url in params"
@@ -36,9 +36,9 @@ end
 p = GoodData::Bricks::Pipeline.prepare([
   LoggerMiddleware,
   BenchMiddleware,
-  ExtractFromDssMiddleware,
+  DssExtractMiddleware,
   GoodDataMiddleware,
-  LoadToGoodDataBrick
+  GoodDataLoadBrick
 ])
 
 p.call($SCRIPT_PARAMS)
