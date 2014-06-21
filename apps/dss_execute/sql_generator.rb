@@ -6,7 +6,12 @@ module GoodData::Bricks
     end
 
     def create_loads(columns)
-      return create(LOAD_INFO_NAME, columns, false, true)
+
+      return create(
+        LOAD_INFO_NAME,
+        columns.map {|k, v| {'name' => k}},
+        :meta => true
+      )
     end
 
     def insert_load(column_values)
@@ -25,7 +30,7 @@ module GoodData::Bricks
     end
 
     def load_info_table_name
-      sql_table_name(LOAD_INFO_NAME, false, true)
+      sql_table_name(LOAD_INFO_NAME, :meta => true)
     end
 
     LOAD_INFO_NAME = 'meta_loads'
@@ -34,9 +39,9 @@ module GoodData::Bricks
       return "SELECT #{columns.join(', ')} FROM #{sql_view_name(object, :last_snapshot => true)}"
     end
 
-    def create_last_snapshot_view(object, fields)
-      field_names = fields.map {|f| f[:name] || f['name']}.join(', ')
-      return "CREATE OR REPLACE VIEW #{sql_view_name(object, :last_snapshot => true)} AS SELECT #{field_names}, _LOAD_ID, _LOAD_AT, _INSERTED_AT FROM #{sql_table_name(object)} #{last_load_condition}"
+    def create_last_snapshot_view(object, fields, prefix)
+      field_names = fields.map {|f| f['name']}.join(', ')
+      return "CREATE OR REPLACE VIEW #{sql_view_name(object, :last_snapshot => true, :prefix => prefix)} AS SELECT #{field_names}, _LOAD_ID, _LOAD_AT, _INSERTED_AT FROM #{sql_table_name(object, :prefix => prefix)} #{last_load_condition}"
     end
 
     def last_load_condition(not_equal=false)
@@ -45,13 +50,13 @@ module GoodData::Bricks
     end
 
     # filename is absolute
-    def upload(table, fields, filename, load_id, load_at)
-      field_string_list = fields.map {|f| f[:name] || f['name']}
+    def upload(table, fields, filename, load_id, load_at, prefix)
+      field_string_list = fields.map {|f| f['name']}
       field_list = field_string_list.join(', ')
 
       hash_exp = hash_expression(field_string_list)
 
-      return %Q{COPY #{sql_table_name(table)} (#{field_list}, _LOAD_ID AS '#{load_id}', _LOAD_AT AS '#{load_at}', _DIFF_HASH AS #{hash_exp})
+      return %Q{COPY #{sql_table_name(table, :prefix => prefix)} (#{field_list}, _LOAD_ID AS '#{load_id}', _LOAD_AT AS '#{load_at}', _DIFF_HASH AS #{hash_exp})
       FROM LOCAL '#{filename}' WITH PARSER GdcCsvParser()
       ESCAPE AS '"'
        SKIP 1
@@ -59,13 +64,13 @@ module GoodData::Bricks
       REJECTED DATA '#{reject_filename(filename)}' }
     end
 
-    def history_loading(object, load_history_from_params, object_fields, load_id, load_at)
+    def history_loading(object, load_history_from_params, object_fields, load_id, load_at, prefix)
       if !load_id
         raise "load the data first! load_id is empty"
       end
 
-      snapshot_table_name = sql_table_name(object, true)
-      history_table_name = sql_table_name(load_history_from_params["name"])
+      snapshot_table_name = sql_table_name(object, :historization => true, :prefix => prefix)
+      history_table_name = sql_table_name(load_history_from_params["name"], :prefix => prefix)
       # those that are mapped to nil, are ignored
       ignored_fields = load_history_from_params["column_mapping"].select {|f, t| !t}.keys
       valid_mappings = load_history_from_params["column_mapping"].select {|f,t| t}
@@ -76,7 +81,7 @@ module GoodData::Bricks
       # fields to load from
       src_fields = valid_mappings.values
 
-      all_fields = object_fields.map {|o| o[:name] || o['name']}
+      all_fields = object_fields.map {|o| o['name']}
 
       common_fields = (Set.new(all_fields) - Set.new(dest_fields) - Set.new(src_fields) - Set.new(ignored_fields)).to_a
 
@@ -99,8 +104,11 @@ module GoodData::Bricks
       return "SELECT COUNT(*) FROM #{load_info_table_name}"
     end
 
-    def create(table, fields, historization=false, meta=false)
-      fields_string = fields.map{|f| "#{f[:name] || f['name']} #{TYPE_MAPPING[f[:type] || f['type']] || DEFAULT_TYPE}"}.join(", ")
+    def create(table, fields, options={})
+      historization = options[:historization]
+      meta = options[:meta]
+      prefix = options[:prefix]
+      fields_string = fields.map{|f| "#{f['name']} #{TYPE_MAPPING[f['type']] || DEFAULT_TYPE}"}.join(", ")
       meta_cols = col_strings(META_COLUMNS)
       hist_cols = historization ? ", #{col_strings(HISTORIZATION_COLUMNS)}" : ""
 
@@ -108,7 +116,7 @@ module GoodData::Bricks
       # it can be somehow faked using sequences
       id_col = historization ? "" : "#{ID_COLUMN.keys[0]} #{ID_COLUMN.values[0]},"
 
-      return "CREATE TABLE IF NOT EXISTS #{sql_table_name(table, historization, meta)}
+      return "CREATE TABLE IF NOT EXISTS #{sql_table_name(table, :historization => historization, :meta => meta, :prefix => prefix)}
       (#{id_col} #{fields_string}, #{meta_cols} #{hist_cols})"
     end
 
@@ -116,17 +124,17 @@ module GoodData::Bricks
       "SELECT COUNT(column_name) FROM columns WHERE table_name = '#{sql_table_name(object)}' and column_name = '#{column}'"
     end
 
-    def delete_but_last_load(object)
-      table_name = sql_table_name(object)
+    def delete_but_last_load(object, prefix)
+      table_name = sql_table_name(object, :prefix => prefix)
       return "DELETE FROM #{table_name} #{last_load_condition(true)}"
     end
 
-    def historization_merge(object, merge_from_params, object_fields)
+    def historization_merge(object, merge_from_params, object_fields, source)
 
       # get all the params to be used
-      snapshot_table_name = sql_table_name(object, true)
-      object_table_name = sql_table_name(merge_from_params["name"])
-      fields = object_fields.map {|o| o[:name] || o['name']}
+      snapshot_table_name = sql_table_name(object, :historization => true, :prefix => source)
+      object_table_name = sql_table_name(merge_from_params["name"], :prefix => source)
+      fields = object_fields.map {|o| o['name']}
 
       sql = "MERGE  INTO #{snapshot_table_name} s USING #{object_table_name} o\n"
 
@@ -230,15 +238,19 @@ module GoodData::Bricks
       end
     end
 
-    DEFAULT_TABLE_PREFIX = "dss"
+    DEFAULT_TABLE_PREFIX = ''
 
     def table_prefix
-      return "#{@params['dss_name_prefix'] || DEFAULT_TABLE_PREFIX}_"
+      return @params['dss_name_prefix'] ? "#{@params['dss_name_prefix']}_" : DEFAULT_TABLE_PREFIX
     end
 
-    def sql_table_name(obj, historization=false, meta=false)
+    def sql_table_name(obj, options={})
+      historization = options[:historization]
+      meta = options[:meta]
+      ds_prefix = options[:prefix] ? "#{options[:prefix]}_" : ''
       hist_postfix = historization || meta ? '' : '_in'
-      return "#{table_prefix}#{obj}#{hist_postfix}"
+
+      return "#{table_prefix}#{ds_prefix}#{obj}#{hist_postfix}"
     end
 
     def sql_view_name(obj, options={})

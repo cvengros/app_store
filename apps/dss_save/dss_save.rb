@@ -9,15 +9,18 @@ module GoodData::Bricks
   class DssSaveBrick
     def call(params)
       executor = GoodData::Bricks::DssExecutor.new(params)
-      downloaded_info = params[:salesforce_downloaded_info] || params['salesforce_downloaded_info']
-      # create dss tables
-      executor.create_tables(downloaded_info[:objects] || downloaded_info['objects'])
+      downloaded_info = params['local_files']
 
-      # load the data as is
-      executor.load_data(downloaded_info)
+      downloaded_info.each do |source, info|
+        # create dss tables
+        executor.create_tables(source, info, params['dss_historized_objects'])
 
-      # reshuffle the data to the historization tables
-      executor.load_historization_data(downloaded_info, params['salesforce_historized_objects'])
+        # load the data as is
+        executor.load_data(source, info)
+
+        # reshuffle the data to the historization tables
+        executor.load_historization_data(source, info, params['dss_historized_objects'])
+      end
     end
   end
 end

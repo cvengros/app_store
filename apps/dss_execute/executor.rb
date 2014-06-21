@@ -17,32 +17,29 @@ module GoodData::Bricks
 
       @generator = SQLGenerator.new(params)
 
-
       Jdbc::DSS.load_driver
       Java.com.gooddata.dss.jdbc.driver.DssDriver
     end
 
-    # expecting hash:
-    # table name ->
-    #   :fields -> list of columns
-    def create_tables(table_hash)
+
+    def create_tables(source, info, historized_objects)
 
       # create the load table if it doesn't exist yet
-      create_sql = @generator.create_loads([{:name => 'salesforce_server'}])
+      create_sql = @generator.create_loads(info['meta'])
       execute(create_sql)
 
       # create the tables one by one
-      table_hash.each do |table, table_meta|
-        fields = table_meta[:fields] || table_meta['fields']
-        sql = @generator.create(table, fields)
+      info['objects'].each do |table, table_meta|
+        fields = table_meta['fields']
+        sql = @generator.create(table, fields, :prefix => source)
         execute(sql)
 
-        sql_view = @generator.create_last_snapshot_view(table, fields)
+        sql_view = @generator.create_last_snapshot_view(table, fields, source)
         execute(sql_view)
 
         # if it should be historized create one more
-        if table_meta[:to_be_historized] || table_meta['to_be_historized']
-          sql = @generator.create(table, fields, true)
+        if historized_objects[table]
+          sql = @generator.create(table, fields, :historization => true, :prefix => source)
           execute(sql)
         end
       end
@@ -52,17 +49,15 @@ module GoodData::Bricks
     # table name ->
     #   :fields -> list of columns
     #   :filename -> name of the csv file
-    def load_data(downloaded_info)
+    def load_data(source, info)
 
       # save the info and load the tables
-      save_download_info(downloaded_info)
-
-      table_hash = downloaded_info[:objects] || downloaded_info['objects']
+      save_download_info(info['meta'])
 
       # load the data for each table and each file to be loaded there
-      table_hash.each do |table, table_meta|
+      info['objects'].each do |table, table_meta|
         (table_meta[:filenames] || table_meta['filenames']).each do |filename|
-          sql = @generator.upload(table, table_meta[:fields] || table_meta['fields'], filename, @load_id, @load_at)
+          sql = @generator.upload(table, table_meta['fields'], filename, @load_id, @load_at, source)
           execute(sql)
 
           # if there's something in the reject/except, raise an error
@@ -75,7 +70,7 @@ module GoodData::Bricks
       @data_loaded = true
     end
 
-    def load_historization_data(downloaded_info, historized_objects_params)
+    def load_historization_data(source, downloaded_info, historized_objects_params)
       if ! @data_loaded
         raise "No data loaded, nothing to shuffle to historized datasets. First load data with load_data."
       end
@@ -93,17 +88,18 @@ module GoodData::Bricks
             load_from_params = historized_objects_params[object]["load_history_from"]
 
             # for fields use the history object fields
-            if ! (downloaded_info[:objects] || downloaded_info['objects'])[load_from_params["name"]]
-              raise "The source for historized object #{load_from_params["name"]} is missing in the downloaded info: #{downloaded_info[:objects]}"
+            if ! downloaded_info['objects'][load_from_params["name"]]
+              raise "The source for historized object #{load_from_params["name"]} is missing in the downloaded info: #{downloaded_info['objects']}"
             end
-            fields = (downloaded_info[:objects] || downloaded_info['objects'])[load_from_params["name"]][:fields] || (downloaded_info[:objects] || downloaded_info['objects'])[load_from_params["name"]]['fields']
+            fields = downloaded_info['objects'][load_from_params["name"]]['fields']
 
             load_hist_sql = @generator.history_loading(
               object,
               load_from_params,
               fields,
               @load_id,
-              @load_at
+              @load_at,
+              source
             )
             execute(load_hist_sql)
           end
@@ -111,7 +107,7 @@ module GoodData::Bricks
           @logger.info "Deleting old loads for #{object}" if @logger
 
           # if it's not the first load only keep the latest load in the merge_from table
-          delete_sql = @generator.delete_but_last_load(historized_objects_params[object]["merge_from"]["name"])
+          delete_sql = @generator.delete_but_last_load(historized_objects_params[object]["merge_from"]["name"], source)
           execute(delete_sql)
         end
         @logger.info "Merging data into history table for #{object}"
@@ -119,7 +115,8 @@ module GoodData::Bricks
         merge_sql = @generator.historization_merge(
           object,
           historized_objects_params[object]["merge_from"],
-          (downloaded_info[:objects] || downloaded_info['objects'])[object][:fields] || (downloaded_info[:objects] || downloaded_info['objects'])[object]['fields']
+          downloaded_info['objects'][object]['fields'],
+          source
         )
         execute(merge_sql)
       end
@@ -148,7 +145,7 @@ module GoodData::Bricks
 
       # insert it there
       insert_sql = @generator.insert_load(
-        "salesforce_server" => downloaded_info[:salesforce_server] || downloaded_info['salesforce_server'],
+        "salesforce_server" => downloaded_info['salesforce_server'],
         "_LOAD_ID" => load_id,
         "_LOAD_AT" => load_at
       )
@@ -170,7 +167,7 @@ module GoodData::Bricks
       Dir.mkdir(DIRNAME) if ! File.directory?(DIRNAME)
 
       # extract load info and put it my own params
-      @params[:salesforce_downloaded_info] = get_load_info
+      @params['local_files'] = get_load_info
 
       # extract each dataset from vertica
       datasets.each do |dataset, ds_structure|
@@ -281,11 +278,11 @@ module GoodData::Bricks
             # if it's a symbol get it from the load params
             if c[0] == ":"
               param_name = c[1..-1].to_sym
-              param_value = @params[:salesforce_downloaded_info][param_name]
+              param_value = @params['local_files'][param_name]
 
               # if it's not in params raise an error
               if ! param_value
-                raise "The parameter #{param_name} is missing in meta params: #{@params[:salesforce_downloaded_info]}"
+                raise "The parameter #{param_name} is missing in meta params: #{@params['local_files']}"
               end
               "'#{param_value}'"
             else

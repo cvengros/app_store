@@ -1,0 +1,52 @@
+{
+  "skip_backup": true,
+  "salesforce_single_batch": false,
+  "salesforce_username": "customer@theircompany.com",
+  "salesforce_password": "theirpassword",
+  "salesforce_token": "theirtoken",
+
+  "salesforce_client_id": "sfdc oauth app id",
+  "salesforce_client_secret": "sfdc oauth app secret",
+  "salesforce_objects": ["Account", "Event", "OpportunityLineItem",  "Opportunity", "User", "PricebookEntry", "Product2", "OpportunityStage", "Task", "OpportunityHistory"],
+  "dss_historized_objects": {
+    "Opportunity": {
+      "load_history_from": {
+        "name": "OpportunityHistory",
+        "column_mapping": {
+          "Id": "OpportunityId",
+          "_VALID_FROM": "SystemModstamp",
+          "CreatedDate": null,
+          "CreatedById": null,
+          "IsDeleted": null
+        }
+      },
+      "merge_from": {
+        "name": "Opportunity",
+        "column_mapping": {
+          "_VALID_FROM": "_LOAD_AT"
+        }
+      }
+    },
+    "OpportunityLineItem": {
+      "merge_from": {
+        "name": "OpportunityLineItem",
+        "column_mapping": {
+          "_VALID_FROM": "_LOAD_AT"
+        }
+      }
+    },
+    "PricebookEntry": {
+      "merge_from": {
+        "name": "PricebookEntry",
+        "column_mapping": {
+          "_VALID_FROM": "_LOAD_AT"
+        }
+      }
+    }
+  },
+
+  "dss_jdbc_url": "jdbc:dss://secure.gooddata.com/gdc/dss/instances/something",
+  "dss_GDC_USERNAME": "you@gooddata.com",
+  "dss_GDC_PASSWORD": "yourpassword",
+  "dss_name_prefix": "sfdc"
+}

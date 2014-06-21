@@ -1,6 +1,6 @@
 {
   "salesforce_downloaded_info": "see salesforce_bulk_downloader out",
-  "salesforce_historized_objects": {
+  "dss_historized_objects": {
     "description": "A hash containing information on what objects are historized and where the history is coming from. For each object that should be historized it contains a key.'load_history_from' describes another object that is used to reconstruct history. 'name' is the name of the object, column mapping defines which fields/metadata columns should me mapped to the history table. Columns that are not here are taken 1:1 from the history object fields. 'merge_from' defines from which object the history should be saved with every load.",
     "example_value": {
       "Opportunity": {
