@@ -35,8 +35,8 @@ module GoodData::Bricks
 
     LOAD_INFO_NAME = 'meta_loads'
 
-    def extract(object, columns)
-      return "SELECT #{columns.join(', ')} FROM #{sql_view_name(object, :last_snapshot => true)}"
+    def extract(object, columns, prefix)
+      return "SELECT #{columns.join(', ')} FROM #{sql_view_name(object, :last_snapshot => true, :prefix => prefix)}"
     end
 
     def create_last_snapshot_view(object, fields, prefix)
@@ -255,7 +255,8 @@ module GoodData::Bricks
 
     def sql_view_name(obj, options={})
       last_snapshot_postfix = options[:last_snapshot] ? "_last_snapshot": ''
-      return "#{table_prefix}#{obj}#{last_snapshot_postfix}"
+      ds_prefix = options[:prefix] ? "#{options[:prefix]}_" : ''
+      return "#{table_prefix}#{ds_prefix}#{obj}#{last_snapshot_postfix}"
     end
 
     def obj_name(sql_table)

@@ -1,0 +1,11 @@
+{
+  "skip_backup": true,
+  "salesforce_single_batch": false,
+  "salesforce_username": "you@gooddata.com",
+  "salesforce_password": "pass",
+  "salesforce_token": "tok",
+  "salesforce_client_id": "id",
+  "salesforce_client_secret": "secret",
+
+  "salesforce_objects": ["Account", "Event", "OpportunityLineItem",  "Opportunity", "User", "PricebookEntry", "Product2", "OpportunityStage", "Task", "OpportunityHistory"]
+}

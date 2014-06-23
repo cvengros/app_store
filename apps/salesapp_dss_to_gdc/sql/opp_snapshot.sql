@@ -11,7 +11,7 @@ SELECT
     pe.Product2Id AS product_id_id,
 
     o.StageName AS stage_id_id,
-    o._SNAPSHOT_DATE AS snapshot_date,
+    TO_CHAR(o._SNAPSHOT_DATE, 'DD/MM/YYYY') AS snapshot_date,
     TO_CHAR(o.CreatedDate, 'DD/MM/YYYY') as created_date,
     TO_CHAR(o.CloseDate, 'DD/MM/YYYY') as close_date,
     o.ForecastCategoryName as forecast_id_id

@@ -56,7 +56,7 @@ module GoodData::Bricks
 
       # load the data for each table and each file to be loaded there
       info['objects'].each do |table, table_meta|
-        (table_meta[:filenames] || table_meta['filenames']).each do |filename|
+        table_meta['filenames'].each do |filename|
           sql = @generator.upload(table, table_meta['fields'], filename, @load_id, @load_at, source)
           execute(sql)
 
@@ -162,61 +162,64 @@ module GoodData::Bricks
 
     # extracts data to be filled in to datasets,
     # writes them to a csv file
-    def extract_data(datasets)
+    def extract_data(datasources)
       # create the directory if it doesn't exist
       Dir.mkdir(DIRNAME) if ! File.directory?(DIRNAME)
 
       # extract load info and put it my own params
-      @params['local_files'] = get_load_info
+      @params['load_info'] = get_load_info
 
+      datasources.each do |datasource, datasets|
       # extract each dataset from vertica
-      datasets.each do |dataset, ds_structure|
+        datasets.each do |dataset, ds_structure|
 
-        # if custom sql given
-        if ds_structure["extract_sql"]
-          # get the sql from the file
-          sql = File.open(ds_structure["extract_sql"], 'rb') { |f| f.read }
-          columns_gd = nil
-        else
-          # get the columns and generate the sql
-          columns = get_columns(ds_structure)
-          columns_gd = columns[:gd]
-          sql = @generator.extract(
-            ds_structure["source_object"],
-            columns[:sql]
-          )
+          # if custom sql given
+          if ds_structure["extract_sql"]
+            # get the sql from the file
+            sql = File.open(ds_structure["extract_sql"], 'rb') { |f| f.read }
+            columns_gd = nil
+          else
+            # get the columns and generate the sql
+            columns = get_columns(ds_structure)
+            columns_gd = columns[:gd]
+            sql = @generator.extract(
+              ds_structure["source_object"],
+              columns[:sql],
+              datasource
+            )
+          end
+
+          name = "tmp/#{dataset}-#{DateTime.now.to_i.to_s}.csv"
+
+          # columns of the sql query result
+          sql_columns = nil
+
+          # open a file to write select results to it
+          CSV.open(name, 'w', :force_quotes => true) do |csv|
+
+            fetch_handler = lambda do |f|
+              sql_columns = f.columns
+              # write the columns to the csv file as a header
+              csv << sql_columns
+            end
+
+            # execute the select and write row by row
+            execute_select(sql, fetch_handler) do |row|
+              row_array = sql_columns.map {|col| row[col]}
+              csv << row_array
+            end
+
+            if columns_gd && (sql_columns != columns_gd.map {|c| c.to_sym})
+              raise "something is weird, the columns of the sql '#{sql_columns}' aren't the same as the given cols '#{columns_gd}' "
+            end
+          end
+
+          absolute_path = File.absolute_path(name)
+          ds_structure["csv_filename"] = absolute_path
+          @logger.info("Written results to file #{absolute_path}") if @logger
         end
-
-        name = "tmp/#{dataset}-#{DateTime.now.to_i.to_s}.csv"
-
-        # columns of the sql query result
-        sql_columns = nil
-
-        # open a file to write select results to it
-        CSV.open(name, 'w', :force_quotes => true) do |csv|
-
-          fetch_handler = lambda do |f|
-            sql_columns = f.columns
-            # write the columns to the csv file as a header
-            csv << sql_columns
-          end
-
-          # execute the select and write row by row
-          execute_select(sql, fetch_handler) do |row|
-            row_array = sql_columns.map {|col| row[col]}
-            csv << row_array
-          end
-
-          if columns_gd && (sql_columns != columns_gd.map {|c| c.to_sym})
-            raise "something is weird, the columns of the sql '#{sql_columns}' aren't the same as the given cols '#{columns_gd}' "
-          end
-        end
-
-        absolute_path = File.absolute_path(name)
-        ds_structure["csv_filename"] = absolute_path
-        @logger.info("Written results to file #{absolute_path}") if @logger
       end
-      return datasets
+      return datasources
     end
 
     def object_has_field(object, field)
@@ -278,11 +281,11 @@ module GoodData::Bricks
             # if it's a symbol get it from the load params
             if c[0] == ":"
               param_name = c[1..-1].to_sym
-              param_value = @params['local_files'][param_name]
+              param_value = @params['load_info'][param_name]
 
               # if it's not in params raise an error
               if ! param_value
-                raise "The parameter #{param_name} is missing in meta params: #{@params['local_files']}"
+                raise "The parameter #{param_name} is missing in meta params: #{@params['load_info']}"
               end
               "'#{param_value}'"
             else
