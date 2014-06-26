@@ -1,0 +1,46 @@
+{
+  "GDC_USERNAME": "you@gooddata.com",
+  "GDC_PASSWORD": "pwd",
+
+  "gooddata_model_url": "https://gist.githubusercontent.com/cvengros/a85874dd8f8da034c70d/raw/2441035702459d210b9013b6d1bfe21be3d90de7/salesapp_model.json",
+  "dataset_mapping": {
+    "sfdc": {
+      "account": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/account-1403550982.csv"
+      },
+      "activity": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/activity-1403550985.csv"
+      },
+      "activity_owner": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/activity_owner-1403550987.csv"
+      },
+      "forecast": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/forecast-1403550989.csv"
+      },
+      "opportunity": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/opportunity-1403550991.csv"
+      },
+      "opp_owner": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/opp_owner-1403550993.csv"
+      },
+      "product": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/product-1403550996.csv"
+      },
+      "stage": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/stage-1403550999.csv"
+      },
+      "activity_monitoring": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/activity_monitoring-1403551001.csv"
+      },
+      "opp_records": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/opp_records-1403551003.csv"
+      },
+      "opp_snapshot": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/opp_snapshot-1403552458.csv"
+      },
+      "stage_history": {
+        "csv_filename": "/Users/pcv/Work/BAM_DSS/app_store/apps/dss_extract/tmp/stage_history-1403551017.csv"
+      }
+    }
+  }
+}
