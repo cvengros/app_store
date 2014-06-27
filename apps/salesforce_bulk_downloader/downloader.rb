@@ -38,6 +38,22 @@ module GoodData::Bricks
 
         obj_fields = get_fields(client, obj)
 
+        user_defined_obj_fields = @params['salesforce_objects_use_fields'] ? @params['salesforce_objects_use_fields'][obj] : nil
+
+        # if the fields were given by the user
+        if user_defined_obj_fields
+          user_defined_set = Set.new(user_defined_obj_fields)
+
+          # if it contains some that aren't available, fail
+          unavailable = user_defined_set - Set.new(obj_fields.map { |f| f['name'] })
+          if ! unavailable.empty?
+            raise "The following user defined fields for #{obj} aren't available: #{unavailable.map {|e| e}}"
+          end
+
+          # otherwise use only the given fields
+          obj_fields = obj_fields.keep_if {|f| user_defined_set.member?(f['name'])}
+        end
+
         main_data = download_main_dataset(client, bulk_client, obj, obj_fields)
 
         # if it's already in files, just write downloaded_info

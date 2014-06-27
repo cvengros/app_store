@@ -20,6 +20,15 @@
       }
     }
   },
+  "salesforce_objects_use_fields": {
+    "type": "array",
+    "example_value": {
+      "Account": ["Id", "Name"],
+      "Opportunity": ["Id", "StageName"]
+    },
+    "optional": true,
+    "description": "For each sfdc object you can define a list of fields that you want to download. If not defined, all available fields will be downloaded. When the feature for adding fields to DSS will be implemeted, this won't be needed."
+  },
   "dss_jdbc_url": {
     "type": "string",
     "example_value": "jdbc:dss://secure.gooddata.com/gdc/dss/instances/veryLongId",

@@ -38,7 +38,7 @@ module GoodData::Bricks
         execute(sql_view)
 
         # if it should be historized create one more
-        if historized_objects[table]
+        if historized_objects && historized_objects[table]
           sql = @generator.create(table, fields, :historization => true, :prefix => source)
           execute(sql)
         end
