@@ -11,6 +11,11 @@
     "example_value": "my token",
     "description": "Security token for API access of the salesforce account to load the data from. salesforce_username, salesforce_password, salesforce_token can be replaced by salesforce_oauth_refresh_token"
   },
+  "salesforce_host": {
+    "example_value": "https://demo1.salesforce.com",
+    "description": "Salesforce instance host. If the standard production environment should be used, this param is omitted",
+    "optional": true
+  },
   "salesforce_oauth_refresh_token": {
     "example_value": "5Aep861ikNsOLQGnbrFkBCx1TjDvXz2brerefeeaodjfa.kdfa",
     "description": "OAuth refresh token for the account from which the data should be downloaded. Can be replaced by salesforce_username, salesforce_password, salesforce_token."
@@ -65,5 +70,35 @@
     "example_value": "mypassword",
     "optional": "conditionally",
     "description": "Password that is used for authenticating to DSS. If not passed, GDC_PASSWORD is used."
+  },
+  "skip_backup": {
+    "type": "Boolean",
+    "example_value": true,
+    "optional": true,
+    "description": "Should backup be skipped? By default (when this param isn't passed, S3 backup is performed."
+  },
+  "aws_access_key_id": {
+    "type": "string",
+    "example_value": "AKIREREK22IERWENNDLA",
+    "description": "Key to the account which should be used for s3 backup.",
+    "optional": "if skip_backup"
+  },
+  "aws_secret_access_key": {
+    "type": "string",
+    "example_value": "fdflk/akldjfaidjfoai",
+    "description": "Secret key to the account which should be used for s3 backup.",
+    "optional": "if skip_backup"
+  },
+  "s3_backup_bucket_name": {
+    "type": "string",
+    "example_value": "mybucket",
+    "description": "Name of the bucket to back up to.",
+    "optional": "if skip_backup"
+  },
+  "s3_backup_path": {
+    "type": "string",
+    "example_value": "my/path",
+    "description": "Path to put backup files to within the bucket.",
+    "optional": "if skip_backup"
   }
 }

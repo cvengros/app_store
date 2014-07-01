@@ -37,5 +37,35 @@
     "example_value": "#<Logger:0x001c62af @default_formatter=..>",
     "optional": true,
     "description": "If passed the log messages will be logged using the logger."
+  },
+  "skip_backup": {
+    "type": "Boolean",
+    "example_value": true,
+    "optional": true,
+    "description": "Should backup be skipped? By default (when this param isn't passed, S3 backup is performed."
+  },
+  "aws_access_key_id": {
+    "type": "string",
+    "example_value": "AKIREREK22IERWENNDLA",
+    "description": "Key to the account which should be used for s3 backup.",
+    "optional": "if skip_backup"
+  },
+  "aws_secret_access_key": {
+    "type": "string",
+    "example_value": "fdflk/akldjfaidjfoai",
+    "description": "Secret key to the account which should be used for s3 backup.",
+    "optional": "if skip_backup"
+  },
+  "s3_backup_bucket_name": {
+    "type": "string",
+    "example_value": "mybucket",
+    "description": "Name of the bucket to back up to.",
+    "optional": "if skip_backup"
+  },
+  "s3_backup_path": {
+    "type": "string",
+    "example_value": "my/path",
+    "description": "Path to put backup files to within the bucket.",
+    "optional": "if skip_backup"
   }
 }
