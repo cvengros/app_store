@@ -3,3 +3,6 @@ bin
 .DS_Store
 *.pdf
 *.csv
+config
+Gemfile.lock
+**/credentials.json
