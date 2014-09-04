@@ -1,0 +1,38 @@
+{
+  "historized_objects": {
+    "Opportunity": {
+      "load_history_from": {
+        "name": "OpportunityHistory",
+        "column_mapping": {
+          "Id": "OpportunityId",
+          "_VALID_FROM": "SystemModstamp",
+          "CreatedDate": null,
+          "CreatedById": null,
+          "IsDeleted": null
+        }
+      },
+      "merge_from": {
+        "name": "Opportunity",
+        "column_mapping": {
+          "_VALID_FROM": "_LOAD_AT"
+        }
+      }
+    },
+    "OpportunityLineItem": {
+      "merge_from": {
+        "name": "OpportunityLineItem",
+        "column_mapping": {
+          "_VALID_FROM": "_LOAD_AT"
+        }
+      }
+    },
+    "PricebookEntry": {
+      "merge_from": {
+        "name": "PricebookEntry",
+        "column_mapping": {
+          "_VALID_FROM": "_LOAD_AT"
+        }
+      }
+    }
+  }
+}

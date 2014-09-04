@@ -3,6 +3,7 @@ bin
 .DS_Store
 *.pdf
 *.csv
-config
+config/**
 Gemfile.lock
 **/credentials.json
+**/downloads
