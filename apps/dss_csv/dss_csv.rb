@@ -4,9 +4,9 @@ require 'gooddata_connectors_dss'
 include GoodData::Bricks
 
 module GoodData::Bricks
-  class CSVDSSMiddleware < GoodData::Bricks::Middleware
+  class DSSCSVMiddleware < GoodData::Bricks::Middleware
     def initialize(options={})
-      @config = File.join(File.dirname(__FILE__), 'config/gse.json')
+      @config = File.join(File.dirname(__FILE__), 'config/gse/gse.json')
       @config_namespace = 'storage__dss'
       super(options)
     end
@@ -19,10 +19,11 @@ module GoodData::Bricks
     end
   end
 
-  class ExecuteCSVDSSBrick
+  class ExecuteDSSCSVBrick
     def call(params)
-      info = params["dss"].save_full(params['config'])
-      params["GDC_LOGGER"].info "Upload to dss finished" if params["GDC_LOGGER"]
+      # tady naky extract
+      info = params["dss"].extract
+      params["GDC_LOGGER"].info "Upload to dss finished #{info}" if params["GDC_LOGGER"]
       return info
     end
   end

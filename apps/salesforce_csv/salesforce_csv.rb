@@ -9,7 +9,7 @@ module GoodData::Bricks
   # Downloading from SFDC
   class SalesforceBulkDownloaderMiddleware < GoodData::Bricks::Middleware
     def initialize(options={})
-      @config = 'config/gse.json'
+      @config = File.join(File.dirname(__FILE__), 'config/gse.json')
       @config_namespace = 'downloader__salesforce'
       super(options)
     end
