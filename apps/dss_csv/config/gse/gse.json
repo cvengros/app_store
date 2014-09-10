@@ -152,16 +152,16 @@
         }
       },
       "activity_monitoring":{
-        "extract_sql":"config/gse/activity_monitoring.sql"
+        "extract_sql":"activity_monitoring.sql"
       },
       "opp_records":{
-        "extract_sql":"config/gse/opp_records.sql"
+        "extract_sql":"opp_records.sql"
       },
       "opp_snapshot":{
-        "extract_sql":"config/gse/opp_snapshot.sql"
+        "extract_sql":"opp_snapshot.sql"
       },
       "stage_history":{
-        "extract_sql":"config/gse/stage_history.sql"
+        "extract_sql":"stage_history.sql"
       }
     }
   }

@@ -12,6 +12,16 @@ module GoodData::Bricks
     end
 
     def default_loaded_call(params)
+      # make the paths to sqls absolute
+      base_dir =  File.dirname(@config)
+      params['config']['storage']['dss']['dataset_mapping'].each  do |s, objs|
+        objs.each do |obj, info|
+          if info["extract_sql"]
+            info["extract_sql"] = File.join(base_dir, info["extract_sql"])
+          end
+        end
+      end
+
       # add the object as middleware
       params["dss"] = GoodData::Connectors::Storage::Dss.new(nil, params)
       @app.call(params)
