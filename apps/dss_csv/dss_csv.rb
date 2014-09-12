@@ -31,7 +31,6 @@ module GoodData::Bricks
 
   class ExecuteDSSCSVBrick
     def call(params)
-      # tady naky extract
       info = params["dss"].extract
       params["GDC_LOGGER"].info "Upload to dss finished #{info}" if params["GDC_LOGGER"]
       return info
