@@ -422,6 +422,41 @@
               "dataset":"oppclose"
            }
         ]
+     },
+     {
+        "name":"gooddata_user",
+        "columns":[
+        {
+          "name":"id",
+          "type":"anchor"
+        },
+        {
+          "name":"email",
+          "type":"label",
+          "reference":"id"
+        }
+      ]
+     },
+     {
+        "name":"user_permission",
+        "columns":[
+        {
+           "name":"dummy",
+           "type":"fact"
+        },
+        {
+          "name":"gooddata_user_id",
+          "type":"reference",
+          "dataset":"gooddata_user",
+          "reference":"id"
+        },
+        {
+          "name":"opportunity_id",
+          "type":"reference",
+          "dataset":"opportunity",
+          "reference":"id"
+        }
+      ]
      }
   ]
 }

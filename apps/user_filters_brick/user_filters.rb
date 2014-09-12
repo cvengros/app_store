@@ -255,8 +255,15 @@ module GoodData
       index = options[:user_column] || 0
       login = line[index]
 
+      if login.nil?
+        fail "The user_column #{options[:user_column]} is missing in the file given by parameter filters_filepath"
+      end
+
       results = options[:labels].mapcat do |label|
         column = label[:column] || Range.new(1, -1)
+        if line[column].nil?
+          fail "The column #{label[:column]} is missing in the file given by parameter filters_filepath"
+        end
         values = column.is_a?(Range) ? line.slice(column) : [line[column]]
         [create_filter(label, values.compact)]
       end
@@ -338,7 +345,7 @@ module GoodData
     # so it precaches the values and still be able to function for larger ones even
     # though that would mean tons of requests
     def self.get_small_labels(labels_cache)
-      labels_cache.values.find_all {|label| label.values_count < 100000}
+      labels_cache.values.find_all {|label| label.values.count < 100000}
     end
 
     # Creates a MAQL expression(s) based on the filter defintion.

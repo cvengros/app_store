@@ -10,16 +10,17 @@ module GoodData::Bricks
     end
 
     def call(params)
-      domain_name = params['domain']
+      config = params['config']
+      domain_name = config['domain']
       domain = GoodData::Domain[domain_name] if domain_name
 
-      filters_filepath = params['filters_filepath']
-      config = params['filters_setup']
+      filters_filepath = config['filters_filepath']
+      config = config['filters_setup']
       symbolized_config = config.deep_dup
       symbolized_config.symbolize_keys!
       symbolized_config[:labels].each {|l| l.symbolize_keys!}
 
-      filters_to_load = GoodData::UserFilterBuilder::get_filters(filters_filepath, symbolized_config);
+      filters_to_load = GoodData::UserFilterBuilder::get_filters(filters_filepath, symbolized_config)
       GoodData::UserFilterBuilder.execute_mufs(filters_to_load, :domain => domain, :dry_run => false)
     end
   end
