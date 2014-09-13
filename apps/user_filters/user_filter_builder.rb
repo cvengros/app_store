@@ -199,6 +199,12 @@ module GoodData
 
   module UserFilterBuilder
 
+    # An umbrella function for all main entry functions
+    def self.build(filters_filepath, symbolized_config, domain)
+      filters_to_load = get_filters(filters_filepath, symbolized_config)
+      execute_mufs(filters_to_load, :domain => domain, :dry_run => false)
+    end
+
     # Main Entry function. Gets values and processes them to get filters
     # that are suitable for other function to process.
     # Values can be read from file or provided inline as an array.

@@ -12,7 +12,7 @@ module GoodData::Bricks
 
     def default_loaded_call(params)
       # add the object as middleware
-      json = params["config"]["visualization"]["gd"].to_json
+      json = params["config"]["visualization"]["gd"]["model"].to_json
       params["model_blueprint"] = GoodData::Model::ProjectBlueprint.from_json(json)
       @app.call(params)
     end
@@ -27,6 +27,17 @@ module GoodData::Bricks
         # get it from the model and load it
         ds = model.find_dataset(dataset)
         ds.upload(ds_structure["csv_filename"])
+      end
+
+      # if userFilters given, apply them
+      if params["user_filters"]
+        params["GDC_LOGGER"].info "Applying user data permissions" if params["GDC_LOGGER"]
+
+        GoodData::UserFilterBuilder.build(
+          params['user_filters']['filters_filepath'],
+          params['user_filters']['symbolized_config'],
+          params['domain']
+        )
       end
     end
   end

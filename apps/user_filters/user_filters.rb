@@ -2,7 +2,7 @@
 require 'open-uri'
 require 'csv'
 require 'gooddata'
-require './user_filter_builder'
+require_relative 'user_filter_builder'
 
 module GoodData::Bricks
   class UserFiltersMiddleware < GoodData::Bricks::Middleware
@@ -26,7 +26,7 @@ module GoodData::Bricks
       params['domain'] = domain
       params['user_filters'] = {
         'symbolized_config' => symbolized_config,
-        'filters_filepath' => filters_filepath
+        'filters_filepath' => filters_filepath,
       }
       @app.call(params)
     end
@@ -35,12 +35,11 @@ module GoodData::Bricks
 
   class ExecuteUserFiltersBrick
     def call(params)
-
-      filters_to_load = GoodData::UserFilterBuilder::get_filters(
+      GoodData::UserFilterBuilder.build(
         params['user_filters']['filters_filepath'],
-        params['user_filters']['symbolized_config']
+        params['user_filters']['symbolized_config'],
+        params['domain']
       )
-      GoodData::UserFilterBuilder.execute_mufs(filters_to_load, :domain => params['domain'], :dry_run => false)
     end
   end
 end
