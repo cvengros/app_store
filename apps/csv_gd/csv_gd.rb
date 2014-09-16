@@ -34,7 +34,7 @@ module GoodData::Bricks
         params["GDC_LOGGER"].info "Applying user data permissions" if params["GDC_LOGGER"]
 
         GoodData::UserFilterBuilder.build(
-          params['user_filters']['filters_filepath'],
+          params['user_filters']['filepath'],
           params['user_filters']['symbolized_config'],
           params['domain']
         )

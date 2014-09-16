@@ -7,6 +7,8 @@ gem "gooddata_connectors_base", :path => "../connector_framework/gooddata_connec
 gem "gooddata_connectors_dss", :path => "../connector_framework/gooddata_connectors_dss"
 #gem "gooddata_connectors_metadata", :path => "../connector_framework/gooddata_connectors_metadata"
 
+gem 'user_hierarchies',  :git => 'git@github.com:fluke777/user_hierarchies.git'
+
 gem "twitter"
 gem "pony"
 gem "terminal-table"

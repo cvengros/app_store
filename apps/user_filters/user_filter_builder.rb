@@ -262,13 +262,13 @@ module GoodData
       login = line[index]
 
       if login.nil?
-        fail "The user_column #{options[:user_column]} is missing in the file given by parameter filters_filepath"
+        fail "The user_column #{options[:user_column]} is missing in the file given by parameter filepath"
       end
 
       results = options[:labels].mapcat do |label|
         column = label[:column] || Range.new(1, -1)
         if line[column].nil?
-          fail "The column #{label[:column]} is missing in the file given by parameter filters_filepath"
+          fail "The column #{label[:column]} is missing in the file given by parameter filepath"
         end
         values = column.is_a?(Range) ? line.slice(column) : [line[column]]
         [create_filter(label, values.compact)]

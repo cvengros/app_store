@@ -11,7 +11,9 @@
     "Product2",
     "OpportunityStage",
     "Task",
-    "OpportunityHistory"
+    "OpportunityHistory",
+    "UserRole",
+    "Profile"
   ],
   "host": null,
   "api_version": null

@@ -13,12 +13,13 @@ module GoodData::Bricks
     end
 
     def default_loaded_call(params)
-      config = params['config']['visualization']['gd']
+      # prepare whatever is needed - config
+      config = params['config']['visualization']['gd']['user_filters']
       domain_name = config['domain']
       domain = GoodData::Domain[domain_name] if domain_name
 
-      filters_filepath = config['filters_filepath']
-      config = config['filters_setup']
+      filters_filepath = config['filepath']
+      config = config['setup']
       symbolized_config = config.deep_dup
       symbolized_config.symbolize_keys!
       symbolized_config[:labels].each {|l| l.symbolize_keys!}
@@ -26,7 +27,7 @@ module GoodData::Bricks
       params['domain'] = domain
       params['user_filters'] = {
         'symbolized_config' => symbolized_config,
-        'filters_filepath' => filters_filepath,
+        'filepath' => filters_filepath,
       }
       @app.call(params)
     end
@@ -36,7 +37,7 @@ module GoodData::Bricks
   class ExecuteUserFiltersBrick
     def call(params)
       GoodData::UserFilterBuilder.build(
-        params['user_filters']['filters_filepath'],
+        params['user_filters']['filepath'],
         params['user_filters']['symbolized_config'],
         params['domain']
       )

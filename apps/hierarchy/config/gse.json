@@ -1,0 +1,8 @@
+{
+  "setup" : {
+    "id" : "Id",
+    "manager_id" : "ParentRoleId"
+  },
+  "output_fields" : [],
+  "type" : "subordinates_closure_tuples"
+}

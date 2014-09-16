@@ -3,23 +3,38 @@
 require 'open-uri'
 require 'csv'
 require 'gooddata'
-require './user_hierarchies/lib/user_hierarchies'
+require 'user_hierarchies'
 
 module GoodData::Bricks
-  class HierarchyBrick < GoodData::Bricks::Brick
-    def version
-      "0.0.1"
+  class HierarchyMiddleware < GoodData::Bricks::Middleware
+    def initialize(options={})
+      @config = File.join(File.dirname(__FILE__), 'config/gse.json')
+      @config_namespace = 'preprocessing__hierarchy'
+      super(options)
     end
-
-    def call(params)
-      hierarchy_filepath = params['hierarchy_filepath']
-      config = params['config']
+    def default_loaded_call(params)
+      # prepare whatever is needed
+      config = params['config']['preprocessing']['hierarchy']
+      hierarchy_filepath = config['filepath']
       output_fields = params['output_fields'] || []
-      hierarchy_type = params['hierarchy_type']
-      symbolized_config = config.symbolize_keys
+      hierarchy_type = config['type']
+      symbolized_config = config['setup'].symbolize_keys
       user_hierarchy = GoodData::UserHierarchies::UserHierarchy.read_from_csv(hierarchy_filepath, symbolized_config)
-      binding.pry
-      results = case hierarchy_type
+
+      params['hierarchy'] = {
+        'object' => user_hierarchy,
+        'type' => hierarchy_type,
+        'output_fields' => output_fields
+      }
+      @app.call(params)
+    end
+  end
+
+  class ExecuteHierarchyBrick
+    def call(params)
+      user_hierarchy = params['hierarchy']['object']
+      output_fields = params['hierarchy']['output_fields']
+      results = case params['hierarchy']['type']
       when 'fixed_level'
         fixed_level_hierarchy(user_hierarchy, output_fields)
       when 'subordinates_closure'
@@ -31,7 +46,6 @@ module GoodData::Bricks
       CSV.open(file, 'w') do |csv|
         results.each { |r| csv << r }
       end
-      (params['gdc_files_to_upload'] ||= []) << {:path => file}
     end
 
     def subordinates_closure(user_hierarchy, output_fields)

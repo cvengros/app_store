@@ -1,15 +1,15 @@
 # encoding: utf-8
 
 require 'gooddata'
-require './user_filters'
+require './hierarchy'
 
 include GoodData::Bricks
 
 p = GoodData::Bricks::Pipeline.prepare([
   LoggerMiddleware,
   BenchMiddleware,
-  GoodDataMiddleware,
-  UserFiltersMiddleware,
-  ExecuteUserFiltersBrick])
+  HierarchyMiddleware,
+  ExecuteHierarchyBrick
+])
 
 p.call($SCRIPT_PARAMS)

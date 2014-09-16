@@ -1,5 +1,5 @@
 {
-  "filters_setup": {
+  "setup": {
     "user_column": "email",
     "labels": [
       { "label": 45019, "column": "id", "over": 45017, "to": 978 }
