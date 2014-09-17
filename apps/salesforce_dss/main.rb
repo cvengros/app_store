@@ -3,6 +3,7 @@ require 'restforce'
 require './salesforce_dss'
 require '../salesforce_csv/salesforce_csv'
 require '../csv_dss/csv_dss'
+require '../hierarchy/hierarchy'
 
 
 include GoodData::Bricks
@@ -18,6 +19,7 @@ p = GoodData::Bricks::Pipeline.prepare([
   RestForceMiddleware,
   BulkSalesforceMiddleware,
   SalesforceBulkDownloaderMiddleware,
+  HierarchyMiddleware,
   CSVDSSMiddleware,
   ExecuteSalesforceDssBrick
 ])

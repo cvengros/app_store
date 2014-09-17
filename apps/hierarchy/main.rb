@@ -9,7 +9,7 @@ p = GoodData::Bricks::Pipeline.prepare([
   LoggerMiddleware,
   BenchMiddleware,
   HierarchyMiddleware,
-  ExecuteHierarchyBrick
+  ExecuteTuplesHierarchyBrick
 ])
 
 p.call($SCRIPT_PARAMS)
