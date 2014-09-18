@@ -169,13 +169,33 @@
           "id":{
             "source_column":"Id"
           },
-          "email":{
-            "source_column":"Email"
+          "login":{
+            "source_column":"Username"
           }
         }
       },
       "user_permission":{
         "extract_sql":"user_permission.sql"
+      },
+      "gooddata_user_details":{
+        "source_object":"User",
+        "columns":{
+          "first_name":{
+            "source_column":"FirstName"
+          },
+          "last_name":{
+            "source_column":"LastName"
+          },
+          "login":{
+            "source_column":"Username"
+          },
+          "email":{
+            "source_column":"Email"
+          },
+          "role":{
+            "source_column_expression":"'adminRole'"
+          }
+        }
       }
     }
   }

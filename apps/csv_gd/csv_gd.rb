@@ -21,6 +21,7 @@ module GoodData::Bricks
   class ExecuteCSVGDBrick
     def call(params)
 
+      # load data
       model = params["model_blueprint"]
       # for each defined dataset
       params["config"]["visualization"]["gd"]["dataset_mapping"].each do |dataset, ds_structure|

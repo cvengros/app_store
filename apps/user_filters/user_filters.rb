@@ -8,27 +8,29 @@ module GoodData::Bricks
   class UserFiltersMiddleware < GoodData::Bricks::Middleware
     def initialize(options={})
       @config = File.join(File.dirname(__FILE__), 'config/gse.json')
-      @config_namespace = 'visualization__gd'
+      @config_namespace = 'visualization__gd__user_filters'
       super(options)
     end
 
     def default_loaded_call(params)
-      # prepare whatever is needed - config
+      # prepare whatever is needed - config, if config given, if not do nothing
       config = params['config']['visualization']['gd']['user_filters']
-      domain_name = config['domain']
-      domain = GoodData::Domain[domain_name] if domain_name
+      if config
+        domain_name = config['domain']
+        domain = GoodData::Domain[domain_name] if domain_name
 
-      filters_filepath = config['filepath']
-      config = config['setup']
-      symbolized_config = config.deep_dup
-      symbolized_config.symbolize_keys!
-      symbolized_config[:labels].each {|l| l.symbolize_keys!}
+        filters_filepath = config['filepath']
+        config = config['setup']
+        symbolized_config = config.deep_dup
+        symbolized_config.symbolize_keys!
+        symbolized_config[:labels].each {|l| l.symbolize_keys!}
 
-      params['domain'] = domain
-      params['user_filters'] = {
-        'symbolized_config' => symbolized_config,
-        'filepath' => filters_filepath,
-      }
+        params['domain'] = domain
+        params['user_filters'] = {
+          'symbolized_config' => symbolized_config,
+          'filepath' => filters_filepath,
+        }
+      end
       @app.call(params)
     end
   end
@@ -40,7 +42,7 @@ module GoodData::Bricks
         params['user_filters']['filepath'],
         params['user_filters']['symbolized_config'],
         params['domain']
-      )
+      ) if params['user_filters']
     end
   end
 end
