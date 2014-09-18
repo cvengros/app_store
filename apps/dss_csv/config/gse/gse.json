@@ -162,6 +162,20 @@
       },
       "stage_history":{
         "extract_sql":"stage_history.sql"
+      },
+      "gooddata_user":{
+        "source_object":"User",
+        "columns":{
+          "id":{
+            "source_column":"Id"
+          },
+          "email":{
+            "source_column":"Email"
+          }
+        }
+      },
+      "user_permission":{
+        "extract_sql":"user_permission.sql"
       }
     }
   }
