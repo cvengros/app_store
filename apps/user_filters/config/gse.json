@@ -1,6 +1,6 @@
 {
   "setup": {
-    "user_column": "login",
+    "user_column": "email",
     "labels": [
       { "label": 45019, "column": "id", "over": 45017, "to": 978 }
       /* will create a filter for each user with expression: ([/gdc/md/agt0l6aqqk2wgkqdqnh6qr4u2jhfvd1w/obj/45018] IN ([/gdc/md/agt0l6aqqk2wgkqdqnh6qr4u2jhfvd1w/obj/45018/elements?id=27])) OVER [/gdc/md/agt0l6aqqk2wgkqdqnh6qr4u2jhfvd1w/obj/45017] TO [/gdc/md/agt0l6aqqk2wgkqdqnh6qr4u2jhfvd1w/obj/978]"

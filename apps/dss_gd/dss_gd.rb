@@ -1,5 +1,8 @@
 require 'gooddata'
 
+require '../user_sync/user_sync'
+
+
 include GoodData::Bricks
 
 module GoodData::Bricks
@@ -19,7 +22,10 @@ module GoodData::Bricks
       end
 
       # if user sync should be done, do it.
-
+      if params['config']['visualization']['gd']['user_sync']
+        params['config']['visualization']['gd']['user_sync']['filepath'] = extract_info['dataset_mapping']['gooddata_user_details']['csv_filename']
+        ExecuteUserSyncBrick.temp_call(params)
+      end
 
       # if userFilters given, apply them
       if params["user_filters"]

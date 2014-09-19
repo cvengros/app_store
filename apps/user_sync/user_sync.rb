@@ -18,6 +18,9 @@ module GoodData::Bricks
 
   class ExecuteUserSyncBrick
     def call(params)
+      self.class.temp_call(params)
+    end
+    def self.temp_call(params)
       GoodData.logging_on
       domain_name = params['config']['visualization']['gd']['domain']
       config = params['config']['visualization']['gd']['user_sync']
@@ -28,11 +31,6 @@ module GoodData::Bricks
       whitelists = config['whitelists']
 
       # Check mandatory columns and parameters
-      mandatory_params = [domain_name, csv_path]
-
-      mandatory_params.each do |param|
-        fail param+' is required in the block parameters.' unless param
-      end
 
       domain = GoodData::Domain[domain_name]
 

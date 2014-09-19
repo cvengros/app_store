@@ -25,9 +25,11 @@ module GoodData::Bricks
       model = params["model_blueprint"]
       # for each defined dataset
       params["config"]["visualization"]["gd"]["dataset_mapping"].each do |dataset, ds_structure|
-        # get it from the model and load it
-        ds = model.find_dataset(dataset)
-        ds.upload(ds_structure["csv_filename"])
+        if model.dataset?(dataset)
+          # get it from the model and load it
+          ds = model.find_dataset(dataset)
+          ds.upload(ds_structure["csv_filename"])
+        end
       end
 
       # if userFilters given, apply them
