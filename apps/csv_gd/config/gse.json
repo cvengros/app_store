@@ -459,6 +459,23 @@
           }
         ]
        }
+    ],
+    "date_dimensions":[
+       {
+          "name":"timeline"
+       },
+       {
+          "name":"oppclose"
+       },
+       {
+          "name":"oppcreated"
+       },
+       {
+          "name":"activity"
+       },
+       {
+          "name":"snapshot"
+       }
     ]
   }
 }

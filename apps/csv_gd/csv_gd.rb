@@ -27,8 +27,7 @@ module GoodData::Bricks
       params["config"]["visualization"]["gd"]["dataset_mapping"].each do |dataset, ds_structure|
         if model.dataset?(dataset)
           # get it from the model and load it
-          ds = model.find_dataset(dataset)
-          ds.upload(ds_structure["csv_filename"])
+          GoodData::Model.upload_data(ds_structure["csv_filename"], model, dataset)
         end
       end
 
