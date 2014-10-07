@@ -1,4 +1,10 @@
 # salesforce_csv
+Downloads data from Salesforce to a local CSV. 
+
+## Features
+* Uses Salesforce Bulk API for downloading data, which is faster for big data volumes than REST and SOAP.
+* For SFDC objects that aren't supported on Bulk API, uses REST API
+* By default, downloads all fields on given objects.
 
 ## Credentials
 See [credentials.json](config/credentials.json)

@@ -141,7 +141,7 @@
             "source_column":"Id"
           },
           "order":{
-            "source_column":"SortOrder"
+            "source_column_expression":"ISNULL(SortOrder, 0)"
           },
           "name":{
             "source_column":"MasterLabel"

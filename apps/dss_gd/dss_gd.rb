@@ -15,19 +15,20 @@ module GoodData::Bricks
       model = params["model_blueprint"]
 
       # for each defined dataset
-      # extract_info["dataset_mapping"].each do |dataset, ds_structure|
-      #   if model.dataset?(dataset)
-      #     # get it from the model and load it
-      #     GoodData::Model.upload_data(ds_structure["csv_filename"], model, dataset)
-      #   end
-      # end
+      extract_info["dataset_mapping"].each do |dataset, ds_structure|
+        if model.dataset?(dataset)
+          params["GDC_LOGGER"].info "Uploading dataset #{dataset}" if params["GDC_LOGGER"]
+          # get it from the model and load it
+          GoodData::Model.upload_data(ds_structure["csv_filename"], model, dataset)
+        end
+      end
 
       # if user sync should be done, do it.
-      # if params['config']['visualization']['gd']['user_sync']
-      #   params["GDC_LOGGER"].info "Syncing user and project users" if params["GDC_LOGGER"]
-      #   params['config']['visualization']['gd']['user_sync']['filepath'] = extract_info['dataset_mapping']['gooddata_user_details']['csv_filename']
-      #   ExecuteUserSyncBrick.temp_call(params)
-      # end
+      if params['config']['visualization']['gd']['user_sync']
+        params["GDC_LOGGER"].info "Syncing user and project users" if params["GDC_LOGGER"]
+        params['config']['visualization']['gd']['user_sync']['filepath'] = extract_info['dataset_mapping']['gooddata_user_details']['csv_filename']
+        ExecuteUserSyncBrick.temp_call(params)
+      end
 
       # if userFilters given, apply them
       if params["user_filters"]

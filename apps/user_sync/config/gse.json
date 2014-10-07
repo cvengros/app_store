@@ -1,9 +1,12 @@
 {
-  "whitelists": null,
-  "ignore_failures": false,
-  "first_name_column" : "first_name",
-  "last_name_column" : "last_name",
-  "login_column" : "login",
-  "email_column" : "email",
-  "role_column" : "role"
+  "ignore_logins": ".*@gooddata.com",
+  "sso_provider": null,
+
+
+  "first_name_column": "first_name",
+  "last_name_column": "last_name",
+  "login_column": "login",
+  "email_column": "email",
+  "role_column": "role",
+  "sso_provider_column": null
 }

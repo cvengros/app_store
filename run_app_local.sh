@@ -24,4 +24,5 @@ CMD=`get_cmd "$GD_PASSWORD"`
 CMD_PRINT=`get_cmd "******"`
 
 echo "$CMD_PRINT"
+#echo "$CMD"
 eval "$CMD"
