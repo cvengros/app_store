@@ -32,14 +32,14 @@ There're two big bricks - `salesforce_dss` and `dss_gd`. These are composed of a
 The ETL is divided to two processes:
 
 1. "E" `salesforce_dss`: Downloads data from Salesforce and loads it to DSS. This process is meant to be run a few times each day. It's composed of the following bricks:
-  1. `salesforce_csv`: Downloads data from Salesforce to local CSVs. See [doc](apps/salesforce_csv/README.md)
-  2. `hierarchy`: Recursively unpacks the hierarchy downloaded from Salesforce to pairs user, boss. Only performed if UserRole is downloaded. See [doc](apps/hierarchy/README.md).
-  3. `csv_dss`: Creates tables in DSS (if they don't exist yet) and uploads the local CSVs there. See [doc](apps/csv_dss/README.md)
+  1. `salesforce_csv`: Downloads data from Salesforce to local CSVs. See [salesforce_csv](apps/salesforce_csv/README.md)
+  2. `hierarchy`: Recursively unpacks the hierarchy downloaded from Salesforce to pairs user, boss. Only performed if UserRole is downloaded. See [hierarchy](apps/hierarchy/README.md).
+  3. `csv_dss`: Creates tables in DSS (if they don't exist yet) and uploads the local CSVs there. See [csv_dss](apps/csv_dss/README.md)
 2. "TL" `dss_gd`: Extracts data from Salesforce and loads it to GD. This process is meant to be run once a day. It's composed of the following bricks:
-  1. `dss_csv`: Extracts data from DSS to local CSVs using generated and user-defined SQL queries. There's one SQL for each GD dataset, plus one for synchronizing users.
-  2. `csv_gd`: Loads datasets from local CSVs to GD.
-  3. `user_sync`: Synchronizes users in the domain and in the project according to the local CSV with users.
-  4. `user_filters`: Creates data filters (MUFs) for each user so that they only see opportunities they should see.
+  1. `dss_csv`: Extracts data from DSS to local CSVs using generated and user-defined SQL queries. There's one SQL for each GD dataset, plus one for synchronizing users. See [dss_csv](apps/dss_csv/README.md)
+  2. `csv_gd`: Loads datasets from local CSVs to GD. See [csv_gd](apps/csv_gd/README.md)
+  3. `user_sync`: Synchronizes users in the domain and in the project according to the local CSV with users. See [user_sync](apps/user_sync/README.md)
+  4. `user_filters`: Creates data filters (MUFs) for each user so that they only see opportunities they should see. See [user_filters](apps/user_filters/README.md)
 
 ## How to run a brick
 To run a brick locally, use the following command:

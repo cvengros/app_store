@@ -1,14 +1,16 @@
-User Brick
-==========
+# user_sync
 Seamless user synchronization.
 
 Managing user roles in projects is a complicated problem. This ruby brick allows you to automatically 
 ensure your project's users stay up to date. Using a CSV document or a specific set of columns as a single point-of-truth 
 the brick will update and change the project to match the document.
 
+
+
 ## Key Features:
-- Add/remove users.
+- Add/remove users to project and domain.
 - Update user contact information.
+- Ignoring certain logins from synchronization (e.g. GoodData people implementing the project), based on regular expression.
 - Move users easily between projects
 - No programming is required to maintain this brick.
 - Update user roles in a project.
