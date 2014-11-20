@@ -15,6 +15,7 @@
     "UserRole",
     "Profile"
   ],
+  "limit_entity_fields": null,
   "host": null,
   "api_version": null
 }

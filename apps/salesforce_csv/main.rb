@@ -10,11 +10,14 @@ Restforce.configure do |config|
 end
 
 p = GoodData::Bricks::Pipeline.prepare([
+  UndotParamsMiddleware,
   LoggerMiddleware,
   BenchMiddleware,
+  GoodDataMiddleware,
   RestForceMiddleware,
   BulkSalesforceMiddleware,
   SalesforceBulkDownloaderMiddleware,
+  FsProjectUploadMiddleware.new(:destination => :staging),
   ExecuteSalesforceCSVBrick
 ])
 

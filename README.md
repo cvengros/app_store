@@ -14,7 +14,8 @@ It's a referential implementation of GoodSales Essentials ETL on top of BI autom
 * Each dataset has its own transformation which is independent of all others.
 * Data that are used for non-analytic purposes (user filters) follow the same process as analytic data. They are loaded to DSS and extracted by SQLs.
 * Downloader downloads all available data, no matter which fields are currently used.
-* Credentials are separated from the rest of the parameters. 
+* All parameters are passed through schedule/execution parameters, no hardcoded params in code.
+* Credentials are separated from the rest of the parameters, passed as hidden parameters in executions and schedules.
 
 ## Configuration and customization
 Configuration of all bricks is done so that: 
