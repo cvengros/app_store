@@ -14,6 +14,7 @@ Restforce.configure do |config|
 end
 
 p = GoodData::Bricks::Pipeline.prepare([
+  UndotParamsMiddleware,
   LoggerMiddleware,
   BenchMiddleware,
   RestForceMiddleware,
