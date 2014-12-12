@@ -21,7 +21,8 @@ module GoodData::Bricks
 
   class ExecuteCSVDSSBrick
     def call(params)
-      info = params["dss"].save_full(params['config'])
+      local_files = params['config']['metadata_filename'] ? JSON.parse(IO.read(params['config']['metadata_filename'])) : params['config']
+      info = params["dss"].save_full(local_files)
       params["GDC_LOGGER"].info "Upload to dss finished" if params["GDC_LOGGER"]
       return info
     end

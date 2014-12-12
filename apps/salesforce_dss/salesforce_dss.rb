@@ -10,7 +10,7 @@ module GoodData::Bricks
     def call(params)
       # download
       downloaded_info = params["salesforce_downloader"].run
-      params["GDC_LOGGER"].info "Download finished. This is the info: #{JSON.pretty_generate({'local_files' => {'sfdc' => downloaded_info}})}" if params["GDC_LOGGER"]
+      params["GDC_LOGGER"].info "Download finished. This is the info: #{JSON.pretty_generate(downloaded_infor)}" if params["GDC_LOGGER"]
 
       # if UserRole downloaded
       if downloaded_info['local_files']['salesforce']['objects']['UserRole']
