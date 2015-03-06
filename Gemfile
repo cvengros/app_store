@@ -12,4 +12,4 @@ gem "restforce"
 gem "pry"
 gem "rake"
 gem 'rinruby'
-gem 'gooddata_datawarehouse'
+gem 'gooddata_datawarehouse', :path => '../gooddata_datawarehouse'

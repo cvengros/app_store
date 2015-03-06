@@ -2,6 +2,7 @@
 require 'rinruby'
 require 'gooddata'
 require 'gooddata_datawarehouse'
+require 'tempfile'
 
 module GoodData::Bricks
   class RBrick < GoodData::Bricks::Brick
@@ -15,6 +16,14 @@ module GoodData::Bricks
         fail "You need to provide ADS_USERNAME, ADS_PASSWORD, ADS_ID. Some of them are nil."
       end
       @dwh = GoodData::Datawarehouse.new(ads_username, ads_password, ads_id)
+    end
+
+    def create_temp_file(table_name)
+      # create a new tempfile and make it last
+      # f = Tempfile.new("#{table_name}.csv")
+      # ObjectSpace.undefine_finalizer(f)
+      # f
+      Dir::Tmpname.create("#{table_name}.csv") { |path| path }
     end
 
     def call(params)
@@ -34,7 +43,7 @@ module GoodData::Bricks
         # r_script_dir = where it was downloaded
       end
 
-      # if input tables given
+      # if input tables given export stuff from ADS to CSV
       unless input_tables.nil? || input_tables.empty?
         unless input_tables.is_a?(Array)
           input_tables = [input_tables]
@@ -43,7 +52,8 @@ module GoodData::Bricks
         input_filenames = []
         # export the tables to csvs
         input_tables.each do |table_name|
-          f = Tempfile.new("#{table_name}.csv").path
+          f = create_temp_file(table_name)
+
           dwh.export_table(table_name, f)
           input_filenames << f
         end
@@ -51,19 +61,25 @@ module GoodData::Bricks
         R.input_filenames = input_filenames
       end
 
-require 'pry'; binding.pry
-      # run the script
-      R.eval(File.read(File.join(r_script_dir, r_script_filename)))
-
-      # if output_tables given load it to ads
-      output_filenames = R.output_filenames rescue nil
-      unless output_tables.nil? || output_tables.empty? || output_filenames.nil?
+      # if output tables given, create temporary files for them
+      unless output_tables.nil? || output_tables.empty?
         unless output_tables.is_a?(Array)
           output_tables = [output_tables]
         end
-        unless output_filenames.is_a?(Array)
-          output_filenames = [output_filenames]
+        output_filenames = []
+        output_tables.each do |table_name|
+          f = create_temp_file(table_name)
+          output_filenames << f
         end
+
+        # pass it to the script
+        R.output_filenames = output_filenames
+      end
+
+      # run the script
+      R.eval(File.read(File.join(r_script_dir, r_script_filename)))
+      # if output_tables given load it to ads
+      unless output_tables.nil? || output_tables.empty?
         dwh = get_dwh(ads_username, ads_password, ads_id)
 
         # for each output file given find the table where it should go and load it there
@@ -73,7 +89,6 @@ require 'pry'; binding.pry
             puts "WARNING: No output table for output file #{f}, or too many output tables: #{table}"
             next
           end
-
           dwh.load_data_from_csv(table[0], f)
         end
       end
