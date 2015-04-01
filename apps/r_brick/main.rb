@@ -1,5 +1,8 @@
+
+
 # encoding: utf-8
 require 'gooddata'
+require 'gooddata_datawarehouse'
 
 require './r_brick'
 

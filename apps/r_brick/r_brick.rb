@@ -34,7 +34,8 @@ module GoodData::Bricks
 
     def call(params)
       # get params from params
-      config = params['config']
+      config = params['config'].nil? ? params : params['config']
+
       r_script_dir = config['R_SCRIPT_DIR'] or fail 'R_SCRIPT_DIR is empty. You need to provide path where the R script is'
       r_script_filename = config['R_SCRIPT_FILENAME'] or fail 'R_SCRIPT_FILENAME is empty. You need to provide the filename of the R script'
       output_tables = config['OUTPUT_TABLES']
