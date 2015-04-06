@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'gooddata', :path => '../gse/gooddata-ruby'
+gem 'gooddata'
 gem "twitter"
 gem "pony"
 gem "terminal-table"
@@ -12,4 +12,4 @@ gem "restforce"
 gem "pry"
 gem "rake"
 gem 'rinruby'
-gem 'gooddata_datawarehouse', :path => '../gooddata_datawarehouse'
+gem 'gooddata_datawarehouse'
