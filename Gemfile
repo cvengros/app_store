@@ -11,3 +11,5 @@ gem "timecop"
 gem "restforce"
 gem "pry"
 gem "rake"
+gem 'rinruby'
+gem 'gooddata_datawarehouse'
